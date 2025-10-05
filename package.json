@@ -1,25 +1,34 @@
 {
-  "name": "my-react-app",
-  "private": true,
-  "version": "0.0.0",
+  "name": "merlin-bess-quote-builder",
+  "private": false,
+  "version": "1.0.0",
+  "description": "Professional BESS (Battery Energy Storage System) quote builder with vendor management and database integration",
   "type": "module",
+  "main": "server/index.cjs",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "start": "node server/index.cjs",
     "lint": "eslint .",
     "preview": "vite preview",
     "dev:all": "concurrently \"npm:dev:api\" \"npm:dev\"",
-    "dev:api": "node server/index.cjs"
+    "dev:api": "node server/index.cjs",
+    "build:prod": "npm run build && npm run start"
   },
   "dependencies": {
+    "better-sqlite3": "^12.4.1",
     "body-parser": "^2.2.0",
+    "compression": "^1.8.1",
     "cors": "^2.8.5",
     "docxtemplater": "^3.66.5",
     "exceljs": "^4.4.0",
     "express": "^5.1.0",
     "pizzip": "^3.2.0",
     "react": "^19.2.0",
-    "react-dom": "^19.2.0"
+    "react-dom": "^19.2.0",
+    "sqlite3": "^5.1.7",
+    "uuid": "^13.0.0",
+    "xlsx-populate": "^1.21.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.36.0",

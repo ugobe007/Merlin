@@ -1,16 +1,150 @@
-# React + Vite
+# 🔋 Merlin BESS Quote Builder
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+**Professional Battery Energy Storage System (BESS) Quote Builder with Vendor Management**
 
-Currently, two official plugins are available:
+A comprehensive web application for creating professional BESS quotes with advanced vendor management, product catalog, and database integration.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+![Merlin BESS Quote Builder](./public/merlin.png)
 
-## React Compiler
+## ✨ Features
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+### 📊 **Advanced Quote Builder**
+- **Smart Calculations**: Automatic BESS sizing based on power and duration requirements
+- **Regional Support**: US, UK, EU, and international configurations
+- **Multi-Use Cases**: On-grid, off-grid, solar integration, wind integration
+- **Budget Analysis**: Compare estimates against known budgets
+- **Professional Exports**: Word documents and Excel spreadsheets
 
-## Expanding the ESLint configuration
+### 🏢 **Vendor Management System**
+- **Vendor Database**: Complete vendor contact and specialty information
+- **Product Catalog**: Detailed product specifications and pricing
+- **Quote Tracking**: Vendor quote submissions and comparisons
+- **Import/Export**: Bulk data import via CSV/JSON
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+### 🛠️ **Technical Specifications**
+- **Modern Stack**: React 19, TypeScript, Vite, Express.js
+- **Database**: SQLite with better-sqlite3 for performance
+- **Styling**: Tailwind CSS for responsive design
+- **Document Generation**: Docxtemplater and ExcelJS
+- **Performance**: Compression, caching, and optimized bundling
+
+### 📈 **Business Intelligence**
+- **Cost Analysis**: Battery, PCS, BOS, and EPC cost breakdowns
+- **ROI Calculations**: Payback period and financial projections
+- **Configuration Management**: Save and load project configurations
+- **Materials Library**: Standard components and pricing database
+
+## 🚀 Quick Start
+
+### Development
+```bash
+# Clone the repository
+git clone https://github.com/ugobe007/Merlin.git
+cd Merlin
+
+# Install dependencies
+npm install
+
+# Start development servers
+npm run dev:all
+```
+
+### Production
+```bash
+# Build the application
+npm run build
+
+# Start production server
+npm start
+```
+
+## 📦 Installation
+
+### Prerequisites
+- **Node.js** 18+ 
+- **npm** or **yarn**
+- **Git**
+
+### Local Development
+1. **Clone and Install**:
+   ```bash
+   git clone https://github.com/ugobe007/Merlin.git
+   cd Merlin
+   npm install
+   ```
+
+2. **Start Development**:
+   ```bash
+   npm run dev:all
+   ```
+   - Frontend: http://localhost:5179
+   - Backend API: http://localhost:5001
+
+3. **Access Application**:
+   - Open http://localhost:5179 in your browser
+   - Start creating BESS quotes immediately!
+
+## 🎯 Usage Guide
+
+### Creating Your First Quote
+
+1. **Project Setup**:
+   - Enter power requirements (MW)
+   - Set standby duration (hours)
+   - Configure voltage and grid connection
+
+2. **System Configuration**:
+   - Choose use case (grid-tied, off-grid, renewable integration)
+   - Set regional requirements and certifications
+   - Add optional solar/wind components
+
+3. **Vendor Management**:
+   - Click "Vendor Manager" to add suppliers
+   - Import product catalogs and pricing
+   - Request and compare vendor quotes
+
+4. **Export Results**:
+   - Generate professional Word documents
+   - Create detailed Excel spreadsheets
+   - Save configurations for future use
+
+### Advanced Features
+
+- **Database Testing**: Use "Database Test" button to verify API connectivity
+- **Bulk Import**: Import vendor data via CSV files
+- **Configuration Save/Load**: Manage multiple project scenarios
+- **Real-time Calculations**: Instant updates as parameters change
+
+## 🚀 Deployment
+
+Multiple deployment options available:
+
+### **Option 1: Traditional Server**
+```bash
+npm run build
+NODE_ENV=production npm start
+```
+
+### **Option 2: Docker**
+```bash
+docker build -t merlin-bess .
+docker run -p 5001:5001 merlin-bess
+```
+
+### **Option 3: Cloud Platforms**
+- **Vercel**: One-click deployment
+- **Heroku**: Git-based deployment  
+- **DigitalOcean**: App Platform integration
+- **AWS/Azure**: Container deployment
+
+See [DEPLOYMENT.md](./DEPLOYMENT.md) for detailed instructions.
+
+## 📄 License
+
+This project is licensed under the MIT License.
+
+---
+
+**Built with ❤️ for the renewable energy industry**
+
+*Empowering the transition to sustainable energy storage solutions*

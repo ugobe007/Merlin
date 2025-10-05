@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Merlin API Connection Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-result { margin: 10px 0; padding: 10px; border-radius: 5px; }
+        .success { background-color: #d4edda; border: 1px solid #c3e6cb; color: #155724; }
+        .error { background-color: #f8d7da; border: 1px solid #f5c6cb; color: #721c24; }
+        .info { background-color: #d1ecf1; border: 1px solid #bee5eb; color: #0c5460; }
+        button { padding: 10px 20px; margin: 5px; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <h1>🧙‍♂️ Merlin API Connection Test</h1>
+    <p>This page tests the connection to the Merlin BESS Quote Builder API from different ports.</p>
+    
+    <div class="info">
+        <strong>Current Location:</strong> <span id="currentLocation"></span>
+    </div>
+    
+    <button onclick="testConnection()">🔍 Test API Connection</button>
+    <button onclick="testCors()">🌐 Test CORS</button>
+    <button onclick="testHealthCheck()">❤️ Health Check</button>
+    
+    <div id="results"></div>
+
+    <script>
+        document.getElementById('currentLocation').textContent = window.location.href;
+
+        async function addResult(message, type = 'info') {
+            const div = document.createElement('div');
+            div.className = `test-result ${type}`;
+            div.innerHTML = `[${new Date().toLocaleTimeString()}] ${message}`;
+            document.getElementById('results').appendChild(div);
+        }
+
+        async function testConnection() {
+            await addResult('🔍 Testing API connection...', 'info');
+            
+            const apiBase = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+                ? 'http://localhost:5000'
+                : `${window.location.protocol}//${window.location.hostname}:5000`;
+            
+            try {
+                const response = await fetch(`${apiBase}/api/health`);
+                const data = await response.json();
+                
+                if (response.ok) {
+                    await addResult(`✅ API connection successful! Server: ${apiBase}`, 'success');
+                    await addResult(`📊 Server Status: ${data.status}, Templates: ${data.templatesLoaded ? 'Loaded' : 'Not Loaded'}`, 'success');
+                    await addResult(`🎯 Request Origin: ${data.requestOrigin}`, 'info');
+                } else {
+                    await addResult(`❌ API responded with error: ${response.status}`, 'error');
+                }
+            } catch (error) {
+                await addResult(`❌ Connection failed: ${error.message}`, 'error');
+            }
+        }
+
+        async function testCors() {
+            await addResult('🌐 Testing CORS configuration...', 'info');
+            
+            const apiBase = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+                ? 'http://localhost:5000'
+                : `${window.location.protocol}//${window.location.hostname}:5000`;
+            
+            try {
+                const response = await fetch(`${apiBase}/api/test-cors`);
+                const data = await response.json();
+                
+                if (response.ok) {
+                    await addResult(`✅ CORS working! Message: ${data.message}`, 'success');
+                    await addResult(`🎯 Your Origin: ${data.yourOrigin}`, 'info');
+                } else {
+                    await addResult(`❌ CORS test failed: ${response.status}`, 'error');
+                }
+            } catch (error) {
+                await addResult(`❌ CORS test failed: ${error.message}`, 'error');
+            }
+        }
+
+        async function testHealthCheck() {
+            await addResult('❤️ Running comprehensive health check...', 'info');
+            
+            const apiBase = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+                ? 'http://localhost:5000'
+                : `${window.location.protocol}//${window.location.hostname}:5000`;
+            
+            try {
+                const response = await fetch(`${apiBase}/api/health`);
+                const data = await response.json();
+                
+                if (response.ok) {
+                    await addResult(`✅ Health Check Passed`, 'success');
+                    await addResult(`🏥 Server Status: ${data.status}`, 'success');
+                    await addResult(`📁 Templates Loaded: ${data.templatesLoaded ? '✅ Yes' : '❌ No'}`, data.templatesLoaded ? 'success' : 'error');
+                    await addResult(`🎯 Request Origin: ${data.requestOrigin}`, 'info');
+                    await addResult(`🚀 Server Port: ${data.serverPort}`, 'info');
+                    
+                    if (data.supportedOrigins) {
+                        await addResult(`🌐 Supported Origins: ${data.supportedOrigins.join(', ')}`, 'info');
+                    }
+                } else {
+                    await addResult(`❌ Health check failed: ${response.status}`, 'error');
+                }
+            } catch (error) {
+                await addResult(`❌ Health check failed: ${error.message}`, 'error');
+            }
+        }
+
+        // Auto-run tests on page load
+        window.onload = async function() {
+            await addResult('🚀 Starting automatic tests...', 'info');
+            await testConnection();
+            await testCors();
+        };
+    </script>
+</body>
+</html>

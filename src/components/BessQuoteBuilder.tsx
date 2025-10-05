@@ -1,20 +1,10 @@
-import React, { useState, useRef } from 'react'
-import newMerlin from '@/assets/images/new_Merlin.png'
-const USE_CASES: string[] = [
-  "ev charging stations",
-  "car washes",
-  "hotels",
-  "data centers",
-  "airports",
-  "solar farm",
-  "processing plants",
-  "indoor farms",
-  "casinos",
-  "colleges & universities",
-  "manufacturing",
-  "logistic hubs",
-  "mining"
-];
+import { useEffect, useRef, useState } from 'react'
+import newMerlin from '../assets/images/new_Merlin.png'
+import { loadAll, saveProject, deleteProject } from '../lib/store'
+import VendorManager from './VendorManager'
+import DatabaseTest from './DatabaseTest'
+
+
 type Region = 'US' | 'UK' | 'EU' | 'Other'
 
 type Inputs = {
@@ -47,6 +37,9 @@ type Assumptions = {
   solarCostPerKWp: number
   windCostPerKW: number
   tariffByRegion: Record<Region, number>
+  vendorName?: string
+  vendorFile?: string
+  vendorDate?: string
 }
 
 type Outputs = {
@@ -82,22 +75,46 @@ const DEFAULT_ASSUMPTIONS: Assumptions = {
 }
 
 export default function BessQuoteBuilder() {
-  const [inputs, setInputs] = useState<Inputs>({
-    powerMW: 1, standbyHours: 2, voltage: '800V',
-    gridMode: 'on-grid', useCase: 'ev charging stations', certifications: 'UL9540A',
-    generatorMW: 0, solarMWp: 0, windMW: 0, utilization: 0.2, valuePerKWh: 0.25,
-    warrantyYears: 10, budgetKnown: false, budgetAmount: undefined,
-    locationRegion: 'UK', pcsSeparate: false,
+  const [inputs, setInputs] = useState<Inputs>(() => {
+    const saved = localStorage.getItem('merlin_inputs')
+    return saved ? JSON.parse(saved) : {
+      powerMW: 1,
+      standbyHours: 2,
+      voltage: '800V',
+      gridMode: 'on-grid',
+      useCase: 'EV Charging Stations',
+      certifications: 'UL9540A',
+      generatorMW: 0,
+      solarMWp: 0,
+      windMW: 0,
+      utilization: 0.2,
+      valuePerKWh: 0.25,
+      warrantyYears: 10,
+      budgetKnown: false,
+      budgetAmount: undefined,
+      locationRegion: 'US' as Region,
+      pcsSeparate: false,
+    }
   })
 
-  // Assumptions are now editable + overridable via upload
   const [assm, setAssm] = useState<Assumptions>(() => {
     const saved = localStorage.getItem('merlin_assumptions')
     return saved ? JSON.parse(saved) : DEFAULT_ASSUMPTIONS
   })
-  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const [projects, setProjects] = useState(loadAll())
+  const [projectName, setProjectName] = useState('My Quote')
+  const [busy, setBusy] = useState<'' | 'word' | 'excel'>('')
+  const [showVendorManager, setShowVendorManager] = useState(false)
+  const [showDatabaseTest, setShowDatabaseTest] = useState(false)
+
+  // persist inputs automatically
+  useEffect(() => {
+    localStorage.setItem('merlin_inputs', JSON.stringify(inputs))
+  }, [inputs])
 
   const [out, setOut] = useState<Outputs>(() => calc(inputs, assm))
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   function persistAssumptions(next: Assumptions) {
     localStorage.setItem('merlin_assumptions', JSON.stringify(next))
@@ -105,7 +122,9 @@ export default function BessQuoteBuilder() {
 
   function calc(i: Inputs, a: Assumptions): Outputs {
     const totalMWh = i.powerMW * i.standbyHours
-    const pcsKW = i.gridMode === 'off-grid' ? i.powerMW * 1000 * a.offgridFactor : i.powerMW * 1000 * a.ongridFactor
+    const pcsKW = i.gridMode === 'off-grid'
+      ? i.powerMW * 1000 * a.offgridFactor
+      : i.powerMW * 1000 * a.ongridFactor
 
     let pcsSubtotal = pcsKW * a.pcsCostPerKW
     if (i.pcsSeparate) pcsSubtotal *= 1.15
@@ -123,16 +142,17 @@ export default function BessQuoteBuilder() {
     const tariffBase = bessCapex + solarSubtotal + windSubtotal
     const tariffs = tariffBase * tariffPct
 
-    let grandCapexBeforeWarranty = bessCapex + genSubtotal + solarSubtotal + windSubtotal + tariffs
+    const grandCapexBeforeWarranty = bessCapex + genSubtotal + solarSubtotal + windSubtotal + tariffs
     const warrantyUplift = i.warrantyYears === 20 ? 1.10 : 1.0
     const grandCapex = grandCapexBeforeWarranty * warrantyUplift
 
     const annualSavings = (i.valuePerKWh ?? 0) * (i.utilization ?? 0) * (i.powerMW * 1000) * 8760
     const roiYears = annualSavings > 0 ? grandCapex / annualSavings : undefined
 
-    const budgetDelta = i.budgetKnown && typeof i.budgetAmount === 'number'
-      ? i.budgetAmount - grandCapex
-      : undefined
+    const budgetDelta =
+      i.budgetKnown && typeof i.budgetAmount === 'number'
+        ? i.budgetAmount - grandCapex
+        : undefined
 
     return {
       totalMWh, pcsKW, batterySubtotal, pcsSubtotal, bos, epc, bessCapex,
@@ -154,7 +174,6 @@ export default function BessQuoteBuilder() {
     setOut(calc(inputs, nextAssm))
   }
 
-  // Merge helper (shallow for top-level, special-case tariffByRegion)
   function applyOverrides(obj: any) {
     const next: Assumptions = JSON.parse(JSON.stringify(assm))
     for (const k of Object.keys(obj || {})) {
@@ -162,7 +181,6 @@ export default function BessQuoteBuilder() {
         next.tariffByRegion = { ...next.tariffByRegion, ...obj[k] }
       } else if (k in next) {
         const val = obj[k]
-        // number fields: coerce safely
         if (typeof (next as any)[k] === 'number') {
           const n = Number(val)
           if (!Number.isNaN(n)) (next as any)[k] = n
@@ -176,8 +194,7 @@ export default function BessQuoteBuilder() {
     setOut(calc(inputs, next))
   }
 
-  // CSV parser: expects headers matching keys (e.g., batteryCostPerKWh, pcsCostPerKW, bosPct, ...)
-  async function parseCSV(text: string) {
+  async function parseCSV(text: string, fileName: string) {
     const lines = text.trim().split(/\r?\n/)
     if (lines.length < 2) return
     const headers = lines[0].split(',').map(h => h.trim())
@@ -186,7 +203,6 @@ export default function BessQuoteBuilder() {
     headers.forEach((h, idx) => {
       if (!h) return
       const v = row[idx]
-      // support tariffByRegion.US style keys
       if (h.startsWith('tariffByRegion.')) {
         const region = h.split('.')[1] as Region
         obj.tariffByRegion = obj.tariffByRegion || {}
@@ -195,6 +211,9 @@ export default function BessQuoteBuilder() {
         obj[h] = /^\d+(\.\d+)?$/.test(v) ? Number(v) : v
       }
     })
+    obj.vendorName = obj.vendorName || 'Vendor CSV Import'
+    obj.vendorFile = fileName
+    obj.vendorDate = new Date().toLocaleString()
     applyOverrides(obj)
   }
 
@@ -203,89 +222,184 @@ export default function BessQuoteBuilder() {
     try {
       if (file.name.endsWith('.json')) {
         const obj = JSON.parse(text)
+        obj.vendorName = obj.vendorName || 'Vendor JSON Import'
+        obj.vendorFile = file.name
+        obj.vendorDate = new Date().toLocaleString()
         applyOverrides(obj)
       } else if (file.name.endsWith('.csv')) {
-        await parseCSV(text)
+        await parseCSV(text, file.name)
       } else {
         alert('Unsupported file type. Please upload .json or .csv')
       }
     } catch (e: any) {
-      console.error('Override parse error:', e)
-      alert(`Failed to parse overrides: ${e.message || e}`)
+      alert(`Failed to parse overrides: ${e.message}`)
     }
   }
 
-  function downloadAssumptionsTemplate() {
-    const template = {
-      // Fill/modify and upload back as JSON
-      batteryCostPerKWh: assm.batteryCostPerKWh,
-      pcsCostPerKW: assm.pcsCostPerKW,
-      bosPct: assm.bosPct,
-      epcPct: assm.epcPct,
-      offgridFactor: assm.offgridFactor,
-      ongridFactor: assm.ongridFactor,
-      genCostPerKW: assm.genCostPerKW,
-      solarCostPerKWp: assm.solarCostPerKWp,
-      windCostPerKW: assm.windCostPerKW,
-      tariffByRegion: assm.tariffByRegion,
+  function handleSaveProject() {
+    const snap = {
+      name: projectName || `Quote ${new Date().toLocaleString()}`,
+      createdAt: new Date().toISOString(),
+      inputs,
+      assumptions: assm,
     }
-    const blob = new Blob([JSON.stringify(template, null, 2)], { type: 'application/json' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = 'assumptions_template.json'
-    a.click()
-    URL.revokeObjectURL(url)
+    saveProject(snap)
+    setProjects(loadAll())
   }
 
-  function resetAssumptions() {
-    setAssm(DEFAULT_ASSUMPTIONS)
-    persistAssumptions(DEFAULT_ASSUMPTIONS)
-    setOut(calc(inputs, DEFAULT_ASSUMPTIONS))
-  }
-
-  const exportToWord = async () => {
-    const payload = { inputs, assumptions: assm, outputs: out }
-    const res = await fetch('/api/export/word', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    })
-    if (!res.ok) return alert('Word export failed.')
-    const blob = await res.blob()
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a'); a.href = url; a.download = `BESS_Quote_${Date.now()}.docx`; a.click()
-    URL.revokeObjectURL(url)
-  }
-
-  const exportToExcel = async () => {
-    const payload = { inputs, assumptions: assm, outputs: out }
-    const res = await fetch('/api/export/excel', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    })
-    if (!res.ok) return alert('Excel export failed.')
-    const blob = await res.blob()
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a'); a.href = url; a.download = `BESS_Quote_${Date.now()}.xlsx`; a.click()
-    URL.revokeObjectURL(url)
+  function applyProject(p: any) {
+    setInputs(p.inputs)
+    setAssm(p.assumptions)
+    localStorage.setItem('merlin_assumptions', JSON.stringify(p.assumptions))
+    setOut(calc(p.inputs, p.assumptions))
   }
 
   const money = (n: number) => `$${Math.round(n).toLocaleString()}`
   const pct = (n: number) => `${Math.round(n * 100)}%`
 
+  const exportToWord = async () => {
+    try {
+      setBusy('word')
+      const payload = { inputs, assumptions: assm, outputs: out }
+      
+      // Determine API base URL dynamically
+      const apiBase = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+        ? 'http://localhost:5001'
+        : `${window.location.protocol}//${window.location.hostname}:5001`;
+      
+      // Add timeout and better error handling
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 30000) // 30 second timeout
+      
+      const res = await fetch(`${apiBase}/api/export/word`, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload),
+        signal: controller.signal
+      })
+      
+      clearTimeout(timeoutId)
+      
+      if (!res.ok) {
+        throw new Error(`Server error: ${res.status} ${res.statusText}`)
+      }
+      
+      // Force download
+      const blob = await res.blob()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.style.display = 'none'
+      a.href = url
+      a.download = `${projectName}_BESS_Quote.docx`
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+    } catch (error) {
+      console.error('Export error:', error)
+      alert(error instanceof Error ? error.message : 'Failed to export document. Please try again.')
+    } finally {
+      setBusy('')
+    }
+  }
+
+  const exportToExcel = async () => {
+    try {
+      setBusy('excel')
+      const payload = { inputs, assumptions: assm, outputs: out }
+      
+      // Determine API base URL dynamically
+      const apiBase = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+        ? 'http://localhost:5001'
+        : `${window.location.protocol}//${window.location.hostname}:5001`;
+      
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 30000)
+      
+      const res = await fetch(`${apiBase}/api/export/excel`, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Accept': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        },
+        body: JSON.stringify(payload),
+        signal: controller.signal
+      })
+      
+      clearTimeout(timeoutId)
+      
+      if (!res.ok) {
+        const errorText = await res.text()
+        throw new Error(`Export failed: ${res.status} ${errorText}`)
+      }
+      
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `BESS_Quote_${Date.now()}.xlsx`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+    } catch (error: any) {
+      console.error('Excel export error:', error)
+      if (error.name === 'AbortError') {
+        alert('Export timed out. Please try again.')
+      } else {
+        alert(`Excel export failed: ${error.message || 'Unknown error'}`)
+      }
+    } finally {
+      setBusy('')
+    }
+  }
+
   return (
     <div className="p-8 max-w-5xl mx-auto space-y-6">
-      <header className="flex flex-col items-center mb-6 bg-gradient-to-r from-blue-100 to-white rounded-2xl p-4 shadow-md">
-  <img
-  src={newMerlin}
-  alt="Merlin"
-  className="w-28 h-auto mb-3 animate-[merlinGlow_3s_ease-in-out_infinite]"
-/>
-  <h1 className="text-3xl font-extrabold text-blue-700 tracking-wide">Merlin BESS Quote Builder</h1>
-  <p className="text-sm text-gray-600 italic">“Magic meets energy.”</p>
-</header>
+      {/* Header */}
+      <header className="flex flex-col items-center mb-4 bg-gradient-to-r from-blue-100 to-white rounded-2xl p-4 shadow-md">
+        <img src={newMerlin} alt="Merlin" className="w-28 h-auto drop-shadow-lg mb-3" />
+        <h1 className="text-3xl font-extrabold text-blue-700 tracking-wide text-center">Merlin BESS Quote Builder</h1>
+        <p className="text-sm text-gray-600 italic">“Magic meets energy.”</p>
 
-      {/* --- Inputs Panel (unchanged from earlier, trimmed for brevity) --- */}
+        {/* Project bar */}
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <input
+            className="border p-2 rounded"
+            placeholder="Project name"
+            value={projectName}
+            onChange={e => setProjectName(e.target.value)}
+          />
+          <button className="border rounded px-3 py-2" onClick={handleSaveProject}>Save Project</button>
+          <select
+            className="border p-2 rounded"
+            onChange={e => {
+              const idx = Number(e.target.value)
+              if (!Number.isNaN(idx)) applyProject(projects[idx])
+            }}
+          >
+            <option value="">Load project…</option>
+            {projects.map((p, i) => (
+              <option key={p.name + p.createdAt} value={i}>
+                {p.name} — {new Date(p.createdAt).toLocaleString()}
+              </option>
+            ))}
+          </select>
+          <button
+            className="border rounded px-3 py-2"
+            onClick={() => {
+              if (!projectName) return
+              deleteProject(projectName)
+              setProjects(loadAll())
+            }}
+          >
+            Delete by name
+          </button>
+        </div>
+      </header>
+
+      {/* Inputs Panel */}
       <div className="grid grid-cols-2 gap-4">
         <label className="flex flex-col text-sm">Power (MW)
           <input className="border p-2 rounded" type="number" step="0.1" value={inputs.powerMW}
@@ -295,6 +409,7 @@ export default function BessQuoteBuilder() {
           <input className="border p-2 rounded" type="number" step="0.5" value={inputs.standbyHours}
             onChange={e => updateInputs('standbyHours', Number(e.target.value))} />
         </label>
+
         <label className="flex flex-col text-sm">Grid Mode
           <select className="border p-2 rounded" value={inputs.gridMode}
             onChange={e => updateInputs('gridMode', e.target.value as any)}>
@@ -302,12 +417,18 @@ export default function BessQuoteBuilder() {
             <option value="off-grid">Off-grid</option>
           </select>
         </label>
+
         <label className="flex flex-col text-sm">Use Case
-  <select className="border p-2 rounded" value={inputs.useCase}
-    onChange={e => updateInputs('useCase', e.target.value)}>
-    {USE_CASES.map(uc => <option key={uc} value={uc}>{uc}</option>)}
-  </select>
-</label>
+          <select className="border p-2 rounded" value={inputs.useCase}
+            onChange={e => updateInputs('useCase', e.target.value)}>
+            {[
+              'EV Charging Stations', 'Car Washes', 'Hotels', 'Data Centers', 'Airports',
+              'Solar Farms', 'Processing Plants', 'Indoor Farms', 'Casinos',
+              'Colleges & Universities', 'Manufacturing', 'Logistic Hubs', 'Mining'
+            ].map(u => <option key={u}>{u}</option>)}
+          </select>
+        </label>
+
         <label className="flex flex-col text-sm">Generator (MW)
           <input className="border p-2 rounded" type="number" step="0.1" value={inputs.generatorMW}
             onChange={e => updateInputs('generatorMW', Number(e.target.value))} />
@@ -320,15 +441,18 @@ export default function BessQuoteBuilder() {
           <input className="border p-2 rounded" type="number" step="0.1" value={inputs.windMW}
             onChange={e => updateInputs('windMW', Number(e.target.value))} />
         </label>
+
         <label className="flex flex-col text-sm">Value $/kWh
           <input className="border p-2 rounded" type="number" step="0.01" value={inputs.valuePerKWh}
             onChange={e => updateInputs('valuePerKWh', Number(e.target.value))} />
         </label>
+
         <label className="flex items-center gap-2 text-sm">
           <span>Utilization (0–1)</span>
           <input className="border p-2 rounded flex-1" type="number" step="0.05" value={inputs.utilization}
             onChange={e => updateInputs('utilization', Number(e.target.value))} />
         </label>
+
         <label className="flex flex-col text-sm">Warranty
           <select className="border p-2 rounded" value={inputs.warrantyYears}
             onChange={e => updateInputs('warrantyYears', Number(e.target.value) as 10 | 20)}>
@@ -336,6 +460,7 @@ export default function BessQuoteBuilder() {
             <option value={20}>20 years (+10%)</option>
           </select>
         </label>
+
         <label className="flex flex-col text-sm">Location (Tariff Region)
           <select className="border p-2 rounded" value={inputs.locationRegion}
             onChange={e => updateInputs('locationRegion', e.target.value as Region)}>
@@ -345,12 +470,14 @@ export default function BessQuoteBuilder() {
             <option value="Other">Other (8%)</option>
           </select>
         </label>
+
         <label className="flex items-center gap-2 text-sm">
           <input type="checkbox" className="h-4 w-4"
             checked={inputs.pcsSeparate}
             onChange={e => updateInputs('pcsSeparate', e.target.checked)} />
           <span>PCS separate? (+15% PCS)</span>
         </label>
+
         <div className="col-span-2 border rounded p-3">
           <label className="flex items-center gap-2 text-sm">
             <input type="checkbox" className="h-4 w-4"
@@ -365,83 +492,108 @@ export default function BessQuoteBuilder() {
                   value={inputs.budgetAmount ?? 0}
                   onChange={e => updateInputs('budgetAmount', Number(e.target.value))} />
               </label>
-              {typeof out.budgetDelta === 'number' && (
-                <div className="mt-2 text-sm">
-                  <span>Delta vs. Total: </span>
-                  <strong className={out.budgetDelta >= 0 ? 'text-green-600' : 'text-red-600'}>
-                    {money(out.budgetDelta)}
-                  </strong>
-                  <span className="opacity-70 ml-1">
-                    ({out.budgetDelta >= 0 ? 'Under budget' : 'Over budget'})
-                  </span>
-                </div>
-              )}
             </div>
           )}
         </div>
       </div>
 
-      {/* --- Assumptions Panel --- */}
+      {/* Assumptions Panel */}
       <div className="border rounded p-4 space-y-3">
-        <div className="font-semibold">Assumptions (editable / import overrides)</div>
+        <div className="font-semibold text-lg">Assumptions (editable / import overrides)</div>
 
-        <div className="grid grid-cols-2 gap-3 text-sm">
-          <AssumptionNumber label="Battery $/kWh" value={assm.batteryCostPerKWh}
-            onChange={(v) => updateAssumption('batteryCostPerKWh', v)} />
-          <AssumptionNumber label="PCS $/kW" value={assm.pcsCostPerKW}
-            onChange={(v) => updateAssumption('pcsCostPerKW', v)} />
-          <AssumptionNumber label="BOS %" value={assm.bosPct} step={0.01}
-            onChange={(v) => updateAssumption('bosPct', v)} />
-          <AssumptionNumber label="EPC %" value={assm.epcPct} step={0.01}
-            onChange={(v) => updateAssumption('epcPct', v)} />
-          <AssumptionNumber label="Off-grid PCS factor" value={assm.offgridFactor} step={0.01}
-            onChange={(v) => updateAssumption('offgridFactor', v)} />
-          <AssumptionNumber label="On-grid PCS factor" value={assm.ongridFactor} step={0.01}
-            onChange={(v) => updateAssumption('ongridFactor', v)} />
-          <AssumptionNumber label="Gen $/kW" value={assm.genCostPerKW}
-            onChange={(v) => updateAssumption('genCostPerKW', v)} />
-          <AssumptionNumber label="Solar $/kWp" value={assm.solarCostPerKWp}
-            onChange={(v) => updateAssumption('solarCostPerKWp', v)} />
-          <AssumptionNumber label="Wind $/kW" value={assm.windCostPerKW}
-            onChange={(v) => updateAssumption('windCostPerKW', v)} />
+        {assm.vendorName && (
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 flex items-center gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-blue-500 flex-shrink-0"
+              fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                d="M13 16h-1v-4h-1m1-4h.01M12 9v2m0 4v2m9-7a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <div className="text-sm text-blue-800">
+              <p className="font-medium">Vendor Data Applied</p>
+              <p className="italic">
+                Using vendor data from <strong>{assm.vendorName}</strong>
+                {assm.vendorFile && <> ({assm.vendorFile})</>} — uploaded {assm.vendorDate}.
+              </p>
+            </div>
+          </div>
+        )}
 
-          {/* Tariffs by region */}
-          <AssumptionNumber label="Tariff US %" value={assm.tariffByRegion.US} step={0.01}
-            onChange={(v) => updateAssumption('tariffByRegion', { ...assm.tariffByRegion, US: v } as any)} />
-          <AssumptionNumber label="Tariff UK %" value={assm.tariffByRegion.UK} step={0.01}
-            onChange={(v) => updateAssumption('tariffByRegion', { ...assm.tariffByRegion, UK: v } as any)} />
-          <AssumptionNumber label="Tariff EU %" value={assm.tariffByRegion.EU} step={0.01}
-            onChange={(v) => updateAssumption('tariffByRegion', { ...assm.tariffByRegion, EU: v } as any)} />
-          <AssumptionNumber label="Tariff Other %" value={assm.tariffByRegion.Other} step={0.01}
-            onChange={(v) => updateAssumption('tariffByRegion', { ...assm.tariffByRegion, Other: v } as any)} />
-        </div>
+        <>
+          <div className="grid grid-cols-2 gap-3 text-sm">
+            <AssumptionNumber label="Battery $/kWh" value={assm.batteryCostPerKWh} onChange={v => updateAssumption('batteryCostPerKWh', v)} />
+            <AssumptionNumber label="PCS $/kW" value={assm.pcsCostPerKW} onChange={v => updateAssumption('pcsCostPerKW', v)} />
+            <AssumptionNumber label="BOS %" value={assm.bosPct} step={0.01} onChange={v => updateAssumption('bosPct', v)} />
+            <AssumptionNumber label="EPC %" value={assm.epcPct} step={0.01} onChange={v => updateAssumption('epcPct', v)} />
+            <AssumptionNumber label="Off-grid PCS factor" value={assm.offgridFactor} step={0.01} onChange={v => updateAssumption('offgridFactor', v)} />
+            <AssumptionNumber label="On-grid PCS factor" value={assm.ongridFactor} step={0.01} onChange={v => updateAssumption('ongridFactor', v)} />
+            <AssumptionNumber label="Gen $/kW" value={assm.genCostPerKW} onChange={v => updateAssumption('genCostPerKW', v)} />
+            <AssumptionNumber label="Solar $/kWp" value={assm.solarCostPerKWp} onChange={v => updateAssumption('solarCostPerKWp', v)} />
+            <AssumptionNumber label="Wind $/kW" value={assm.windCostPerKW} onChange={v => updateAssumption('windCostPerKW', v)} />
+            <AssumptionNumber label="Tariff US %" value={assm.tariffByRegion.US} step={0.01}
+              onChange={(v) => updateAssumption('tariffByRegion', { ...assm.tariffByRegion, US: v } as any)} />
+            <AssumptionNumber label="Tariff UK %" value={assm.tariffByRegion.UK} step={0.01}
+              onChange={(v) => updateAssumption('tariffByRegion', { ...assm.tariffByRegion, UK: v } as any)} />
+            <AssumptionNumber label="Tariff EU %" value={assm.tariffByRegion.EU} step={0.01}
+              onChange={(v) => updateAssumption('tariffByRegion', { ...assm.tariffByRegion, EU: v } as any)} />
+            <AssumptionNumber label="Tariff Other %" value={assm.tariffByRegion.Other} step={0.01}
+              onChange={(v) => updateAssumption('tariffByRegion', { ...assm.tariffByRegion, Other: v } as any)} />
+          </div>
 
-        <div className="flex flex-wrap gap-2 pt-2">
-          <button className="px-3 py-2 border rounded" onClick={downloadAssumptionsTemplate}>
-            Download JSON Template
-          </button>
-
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".json,.csv"
-            className="hidden"
-            onChange={(e) => {
-              const f = e.target.files?.[0]
-              if (f) handleOverridesFile(f).finally(() => { if (fileInputRef.current) fileInputRef.current.value = '' })
-            }}
-          />
-          <button className="px-3 py-2 border rounded" onClick={() => fileInputRef.current?.click()}>
-            Upload Overrides (.json / .csv)
-          </button>
-
-          <button className="px-3 py-2 border rounded" onClick={resetAssumptions}>
-            Reset to Defaults
-          </button>
-        </div>
+          <div className="flex flex-wrap gap-2 pt-2">
+            <button className="px-3 py-2 border rounded" onClick={() => fileInputRef.current?.click()}>
+              Upload Vendor Quote (.json / .csv)
+            </button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".json,.csv"
+              className="hidden"
+              onChange={(e) => {
+                const f = e.target.files?.[0]
+                if (f) handleOverridesFile(f).finally(() => { if (fileInputRef.current) fileInputRef.current.value = '' })
+              }}
+            />
+            <button
+              className="px-3 py-2 border rounded"
+              onClick={() => {
+                const template = {
+                  batteryCostPerKWh: assm.batteryCostPerKWh,
+                  pcsCostPerKW: assm.pcsCostPerKW,
+                  bosPct: assm.bosPct,
+                  epcPct: assm.epcPct,
+                  offgridFactor: assm.offgridFactor,
+                  ongridFactor: assm.ongridFactor,
+                  genCostPerKW: assm.genCostPerKW,
+                  solarCostPerKWp: assm.solarCostPerKWp,
+                  windCostPerKW: assm.windCostPerKW,
+                  tariffByRegion: assm.tariffByRegion,
+                }
+                const blob = new Blob([JSON.stringify(template, null, 2)], { type: 'application/json' })
+                const url = URL.createObjectURL(blob)
+                const a = document.createElement('a')
+                a.href = url
+                a.download = 'assumptions_template.json'
+                a.click()
+                URL.revokeObjectURL(url)
+              }}
+            >
+              Download JSON Template
+            </button>
+            <button
+              className="px-3 py-2 border rounded"
+              onClick={() => {
+                setAssm(DEFAULT_ASSUMPTIONS)
+                localStorage.setItem('merlin_assumptions', JSON.stringify(DEFAULT_ASSUMPTIONS))
+                setOut(calc(inputs, DEFAULT_ASSUMPTIONS))
+              }}
+            >
+              Reset to Defaults
+            </button>
+          </div>
+        </>
       </div>
 
-      {/* --- Outputs --- */}
+      {/* Outputs */}
       <div className="border rounded p-4 text-sm space-y-1">
         <div>Total MWh: <strong>{out.totalMWh.toFixed(2)}</strong></div>
         <div>PCS kW: <strong>{Math.round(out.pcsKW).toLocaleString()}</strong></div>
@@ -469,19 +621,47 @@ export default function BessQuoteBuilder() {
         )}
       </div>
 
+      {/* Export */}
       <div className="flex gap-3">
-        <button className="px-4 py-2 rounded border" onClick={exportToWord}>Export Word</button>
-        <button className="px-4 py-2 rounded border" onClick={exportToExcel}>Export Excel</button>
+        <button 
+          className="px-4 py-2 rounded border bg-green-600 text-white hover:bg-green-700"
+          onClick={() => setShowVendorManager(true)}
+        >
+          Vendor Manager
+        </button>
+        <button 
+          className="px-4 py-2 rounded border bg-purple-600 text-white hover:bg-purple-700"
+          onClick={() => setShowDatabaseTest(true)}
+        >
+          Database Test
+        </button>
+        <button className="px-4 py-2 rounded border disabled:opacity-60" disabled={busy==='word'} onClick={exportToWord}>
+          {busy==='word' ? 'Exporting…' : 'Export Word'}
+        </button>
+        <button className="px-4 py-2 rounded border disabled:opacity-60" disabled={busy==='excel'} onClick={exportToExcel}>
+          {busy==='excel' ? 'Exporting…' : 'Export Excel'}
+        </button>
       </div>
 
       <p className="text-xs text-neutral-500">
         Import vendor quotes as JSON or CSV to override assumptions. Values persist in your browser.
       </p>
+
+      {/* Vendor Manager Modal */}
+      <VendorManager 
+        isOpen={showVendorManager}
+        onClose={() => setShowVendorManager(false)}
+      />
+
+      {/* Database Test Modal */}
+      <DatabaseTest 
+        isOpen={showDatabaseTest}
+        onClose={() => setShowDatabaseTest(false)}
+      />
     </div>
   )
 }
 
-/** Small reusable number field for assumptions */
 function AssumptionNumber({
   label, value, onChange, step = 1,
 }: { label: string; value: number; onChange: (v: number) => void; step?: number }) {

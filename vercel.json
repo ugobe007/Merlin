@@ -1,0 +1,37 @@
+{
+  "version": 2,
+  "name": "merlin-bess-quote-builder",
+  "builds": [
+    {
+      "src": "package.json",
+      "use": "@vercel/node",
+      "config": {
+        "includeFiles": [
+          "server/**",
+          "dist/**"
+        ]
+      }
+    }
+  ],
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "/server/index.cjs"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/dist/$1"
+    }
+  ],
+  "env": {
+    "NODE_ENV": "production"
+  },
+  "functions": {
+    "server/index.cjs": {
+      "includeFiles": [
+        "server/templates/**",
+        "server/data/**"
+      ]
+    }
+  }
+}

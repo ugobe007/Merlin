@@ -1,31 +1,121 @@
 const express = require('express')
 const cors = require('cors')
+const compression = require('compression')
 const bodyParser = require('body-parser')
 const fs = require('fs')
 const path = require('path')
 const PizZip = require('pizzip')
 const Docxtemplater = require('docxtemplater')
 const ExcelJS = require('exceljs')
+const databaseRoutes = require('./routes/database.cjs')
 
 const app = express()
-app.use(cors())
+
+// Performance optimizations
+app.use(compression({
+  level: 6, // Good balance between compression ratio and speed
+  threshold: 1024, // Only compress files larger than 1KB
+  filter: (req, res) => {
+    return compression.filter(req, res);
+  }
+}));
+
+// Enhanced CORS to support multiple localhost ports
+app.use(cors({
+  origin: [
+    'http://localhost:5173',
+    'http://localhost:5174', // Hot Money Honey
+    'http://localhost:5175',
+    'http://localhost:5176', // Intended Vite dev server
+    'http://localhost:5177',
+    'http://localhost:5178', // Current Vite dev server
+    'http://localhost:3000',
+    'http://localhost:8080'
+  ],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Accept']
+}));
+
 app.use(bodyParser.json({ limit: '5mb' }))
+
+// Serve static files from the dist directory in production
+if (process.env.NODE_ENV === 'production') {
+  app.use(express.static(path.join(process.cwd(), 'dist')));
+}
+
+// Database API routes
+app.use('/api/db', databaseRoutes)
+
+// Request logging middleware
+app.use((req, res, next) => {
+  const origin = req.get('Origin') || req.get('Referer') || 'direct';
+  console.log(`[${new Date().toLocaleTimeString()}] ${req.method} ${req.path} from ${origin}`);
+  next();
+});
+
+// Pre-load templates into memory
+const WORD_TEMPLATE_PATH = path.join(__dirname, 'templates', 'BESS_Quote_Template.docx');
+let wordTemplateBuffer = null;
+
+function loadWordTemplate() {
+  if (!wordTemplateBuffer) {
+    wordTemplateBuffer = fs.readFileSync(WORD_TEMPLATE_PATH);
+    console.log('[server] Loaded Word template into memory');
+  }
+  return wordTemplateBuffer;
+}
+
+// Pre-load on startup
+loadWordTemplate();
 
 const money = (n) => `$${Math.round(Number(n || 0)).toLocaleString()}`
 const pct = (n) => `${Math.round(Number(n || 0) * 100)}%`
 const yesno = (b) => (b ? 'Yes' : 'No')
 
+// Health check endpoint
+app.get('/api/health', (req, res) => {
+  const origin = req.get('Origin') || req.get('Referer') || 'direct';
+  res.json({ 
+    status: 'ok', 
+    timestamp: new Date().toISOString(),
+    templatesLoaded: !!wordTemplateBuffer,
+    requestOrigin: origin,
+    serverPort: process.env.PORT || 5000,
+    supportedOrigins: [
+      'http://localhost:5173',
+      'http://localhost:5174',
+      'http://localhost:5175', 
+      'http://localhost:5176',
+      'http://localhost:5177',
+      'http://localhost:5178'
+    ]
+  });
+});
+
+// Test endpoint for CORS from different ports
+app.get('/api/test-cors', (req, res) => {
+  const origin = req.get('Origin') || 'No Origin Header';
+  res.json({
+    message: 'CORS working!',
+    yourOrigin: origin,
+    timestamp: new Date().toISOString()
+  });
+});
+
 app.post('/api/export/word', async (req, res) => {
   try {
+    const startTime = Date.now();
     const { inputs = {}, assumptions = {}, outputs = {} } = req.body
 
-    const templatePath = path.join(__dirname, 'templates', 'BESS_Quote_Template.docx')
-    if (!fs.existsSync(templatePath)) {
-      return res.status(404).json({ error: 'Template not found', path: templatePath })
-    }
-    const content = fs.readFileSync(templatePath, 'binary')
-    const zip = new PizZip(content)
-    const doc = new Docxtemplater(zip, { paragraphLoop: true, linebreaks: true })
+    // Use pre-loaded template for faster processing
+    const templateBuffer = loadWordTemplate();
+    const zip = new PizZip(templateBuffer)
+    const doc = new Docxtemplater(zip, { 
+      paragraphLoop: true, 
+      linebreaks: true,
+      nullGetter: () => '' // Handle null values gracefully
+    })
 
     const tariffPct = (assumptions.tariffByRegion?.[inputs.locationRegion] ?? 0)
     const warrantyUplift = inputs.warrantyYears === 20 ? 0.10 : 0
@@ -83,9 +173,21 @@ app.post('/api/export/word', async (req, res) => {
     })
 
     doc.render()
-    const buf = doc.getZip().generate({ type: 'nodebuffer' })
+    const buf = doc.getZip().generate({ 
+      type: 'nodebuffer',
+      compression: 'DEFLATE',
+      compressionOptions: { level: 6 }
+    })
+
+    const processingTime = Date.now() - startTime;
+    console.log(`[server] Word export completed in ${processingTime}ms`);
+
+    // Optimized headers
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document')
     res.setHeader('Content-Disposition', 'attachment; filename=BESS_Quote.docx')
+    res.setHeader('Content-Length', buf.length);
+    res.setHeader('Cache-Control', 'no-cache');
+    
     return res.send(buf)
   } catch (e) {
     console.error('WORD EXPORT ERROR:', e)
@@ -95,10 +197,13 @@ app.post('/api/export/word', async (req, res) => {
 
 app.post('/api/export/excel', async (req, res) => {
   try {
+    const startTime = Date.now();
     const { inputs = {}, assumptions = {}, outputs = {} } = req.body
+    
     const wb = new ExcelJS.Workbook()
     const ws = wb.addWorksheet('BESS Quote')
 
+    // Pre-configure columns for better performance
     ws.columns = [
       { header: 'Field', key: 'k', width: 34 },
       { header: 'Value', key: 'v', width: 28 },
@@ -107,6 +212,7 @@ app.post('/api/export/excel', async (req, res) => {
     const tariffPct = (assumptions.tariffByRegion?.[inputs.locationRegion] ?? 0)
     const warrantyUplift = inputs.warrantyYears === 20 ? 0.10 : 0
 
+    // Pre-build all rows for batch insertion
     const rows = [
       ['--- Inputs ---', ''],
       ['Power (MW)', inputs.powerMW],
@@ -160,19 +266,29 @@ app.post('/api/export/excel', async (req, res) => {
       ['Budget Delta', (inputs.budgetKnown && typeof outputs.budgetDelta === 'number') ? money(outputs.budgetDelta) : '—'],
     ]
 
+    // Batch insert all rows at once
     ws.addRows(rows.map(([k, v]) => ({ k, v })))
 
-    // Style section headers
-    ws.eachRow((row) => {
-      const firstCell = row.getCell(1).value
-      if (typeof firstCell === 'string' && firstCell.startsWith('---')) {
-        row.font = { bold: true }
+    // Style section headers efficiently
+    let rowIndex = 1;
+    rows.forEach(([k]) => {
+      rowIndex++;
+      if (typeof k === 'string' && k.startsWith('---')) {
+        ws.getRow(rowIndex).font = { bold: true };
       }
-    })
+    });
 
     const buf = await wb.xlsx.writeBuffer()
+    
+    const processingTime = Date.now() - startTime;
+    console.log(`[server] Excel export completed in ${processingTime}ms`);
+
+    // Optimized headers
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
     res.setHeader('Content-Disposition', 'attachment; filename=BESS_Quote.xlsx')
+    res.setHeader('Content-Length', buf.byteLength);
+    res.setHeader('Cache-Control', 'no-cache');
+    
     return res.send(Buffer.from(buf))
   } catch (e) {
     console.error('EXCEL EXPORT ERROR:', e)
@@ -180,5 +296,15 @@ app.post('/api/export/excel', async (req, res) => {
   }
 })
 
-const PORT = 5174
-app.listen(PORT, () => console.log(`API listening on http://localhost:${PORT}`))
+// Serve React app index.html for the root path in production
+if (process.env.NODE_ENV === 'production') {
+  app.get('/', (req, res) => {
+    res.sendFile(path.resolve(process.cwd(), 'dist', 'index.html'));
+  });
+}
+
+const PORT = process.env.PORT || 5001
+app.listen(PORT, () => {
+  console.log(`[server] Optimized API listening on http://localhost:${PORT}`)
+  console.log(`[server] Environment: ${process.env.NODE_ENV || 'development'}`)
+})

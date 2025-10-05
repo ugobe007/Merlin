@@ -1,5 +1,6 @@
-import BessQuoteBuilder from '@/components/BessQuoteBuilder'
+import BessQuoteBuilder from './components/BessQuoteBuilder'
 
-export default function App() {
+function App() {
   return <BessQuoteBuilder />
 }
+export default App
