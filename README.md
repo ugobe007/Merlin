@@ -119,23 +119,34 @@ npm start
 
 Multiple deployment options available:
 
-### **Option 1: Traditional Server**
+### **Option 1: Render (Recommended)**
+1. Go to [render.com](https://render.com)
+2. Sign up with GitHub
+3. Click "New +" → "Web Service"
+4. Connect "ugobe007/Merlin" repository
+5. Configure:
+   - Build Command: `npm install && npm run build`
+   - Start Command: `npm start`
+   - Environment: `NODE_ENV=production`
+6. Deploy automatically!
+
+### **Option 2: Traditional Server**
 ```bash
 npm run build
 NODE_ENV=production npm start
 ```
 
-### **Option 2: Docker**
+### **Option 3: Docker**
 ```bash
 docker build -t merlin-bess .
 docker run -p 5001:5001 merlin-bess
 ```
 
-### **Option 3: Cloud Platforms**
-- **Vercel**: One-click deployment
+### **Option 4: Other Cloud Platforms**
+- **Railway**: Connect GitHub repository
 - **Heroku**: Git-based deployment  
 - **DigitalOcean**: App Platform integration
-- **AWS/Azure**: Container deployment
+- **Vercel**: Serverless deployment
 
 See [DEPLOYMENT.md](./DEPLOYMENT.md) for detailed instructions.
 
