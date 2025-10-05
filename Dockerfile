@@ -1,4 +1,13 @@
-# Use Nod# Copy package files
+# Use Node.js version with build tools
+FROM node:18-alpine
+
+# Install dependencies needed for better-sqlite3
+RUN apk add --no-cache python3 py3-setuptools make g++ sqlite
+
+# Set working directory
+WORKDIR /app
+
+# Copy package files
 COPY package*.json ./
 
 # Install all dependencies (including dev dependencies for build)
@@ -11,26 +20,7 @@ COPY . .
 RUN npm run build
 
 # Remove dev dependencies to reduce image size
-RUN npm prune --productionrsion with build tools
-FROM node:18-alpine
-
-# Install dependencies needed for better-sqlite3
-RUN apk add --no-cache python3 py3-setuptools make g++ sqlite
-
-# Set working directory
-WORKDIR /app
-
-# Copy package files
-COPY package*.json ./
-
-# Install dependencies
-RUN npm ci --only=production
-
-# Copy application code
-COPY . .
-
-# Build the React application
-RUN npm run build
+RUN npm prune --production
 
 # Create data directory for SQLite database
 RUN mkdir -p /app/server/data
