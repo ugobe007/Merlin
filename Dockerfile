@@ -1,4 +1,17 @@
-# Use Node.js LTS version with build tools
+# Use Nod# Copy package files
+COPY package*.json ./
+
+# Install all dependencies (including dev dependencies for build)
+RUN npm ci
+
+# Copy application files
+COPY . .
+
+# Build the React application
+RUN npm run build
+
+# Remove dev dependencies to reduce image size
+RUN npm prune --productionrsion with build tools
 FROM node:18-alpine
 
 # Install dependencies needed for better-sqlite3
