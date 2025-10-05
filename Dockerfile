@@ -1,8 +1,8 @@
 # Use Node.js LTS version with build tools
 FROM node:18-alpine
 
-# Install Python and build dependencies for better-sqlite3
-RUN apk add --no-cache python3 make g++ sqlite
+# Install dependencies needed for better-sqlite3
+RUN apk add --no-cache python3 py3-setuptools make g++ sqlite
 
 # Set working directory
 WORKDIR /app
