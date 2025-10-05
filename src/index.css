@@ -1,0 +1,23 @@
+@import "tailwindcss";
+@import "./styles/custom.css";
+
+/* your overrides */
+html { font-size: 16px; }
+body { font-family: Helvetica, Arial, sans-serif; color: #000; }
+
+@keyframes merlinGlow {
+  0% {
+    filter: drop-shadow(0 0 5px rgba(100, 149, 237, 0.3))
+            drop-shadow(0 0 10px rgba(100, 149, 237, 0.4));
+  }
+  50% {
+    filter: drop-shadow(0 0 12px rgba(65, 105, 225, 0.7))
+            drop-shadow(0 0 24px rgba(100, 149, 237, 0.8));
+  }
+  100% {
+    filter: drop-shadow(0 0 5px rgba(100, 149, 237, 0.3))
+            drop-shadow(0 0 10px rgba(100, 149, 237, 0.4));
+  }
+}
+
+

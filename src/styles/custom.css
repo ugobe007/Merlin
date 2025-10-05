@@ -1,0 +1,29 @@
+/* Light blue buttons and general visual polish */
+button {
+  background-color: #e0f2ff;      /* very light blue */
+  color: #003366;                 /* dark navy text for contrast */
+  border: 1px solid #a7d8ff;
+  border-radius: 6px;
+  padding: 8px 14px;
+  font-weight: 500;
+  transition: background-color 0.2s ease-in-out;
+}
+
+button:hover {
+  background-color: #c5e7ff;      /* slightly darker on hover */
+}
+
+input,
+select {
+  background-color: #f9fcff;      /* subtle blue-white */
+  border: 1px solid #c7e2f7;
+  border-radius: 4px;
+  color: #002b44;
+}
+
+input:focus,
+select:focus {
+  outline: none;
+  border-color: #66b2ff;
+  box-shadow: 0 0 4px #99d4ff;
+}
