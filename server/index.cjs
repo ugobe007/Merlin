@@ -152,7 +152,10 @@ app.post('/api/export/word', async (req, res) => {
   console.log('[export:word] Starting Word export request');
   try {
     const { inputs = {}, assumptions = {}, outputs = {} } = req.body;
-    console.log('[export:word] Request body received, inputs keys:', Object.keys(inputs));
+    console.log('[export:word] Request body received:');
+    console.log('[export:word] - inputs:', JSON.stringify(inputs, null, 2));
+    console.log('[export:word] - assumptions keys:', Object.keys(assumptions));
+    console.log('[export:word] - outputs keys:', Object.keys(outputs));
 
     console.time('export:word:preprocess');
     // Pre-compute all data once (recommended optimization)
@@ -161,6 +164,7 @@ app.post('/api/export/word', async (req, res) => {
     
     // Pre-converted template data for faster rendering
     const templateData = {
+      PROJECT_NAME: String(inputs.projectName || 'BESS Quote'),
       POWER: String(inputs.powerMW || ''),
       HOURS: String(inputs.standbyHours || ''),
       VOLTAGE: String(inputs.voltage || ''),

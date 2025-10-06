@@ -266,7 +266,11 @@ export default function BessQuoteBuilder() {
   const exportToWord = async () => {
     try {
       setBusy('word')
-      const payload = { inputs, assumptions: assm, outputs: out }
+      const payload = { 
+        inputs: { ...inputs, projectName }, 
+        assumptions: assm, 
+        outputs: out 
+      }
       
       // Determine API base URL dynamically
       const apiBase = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
@@ -313,7 +317,11 @@ export default function BessQuoteBuilder() {
   const exportToExcel = async () => {
     try {
       setBusy('excel')
-      const payload = { inputs, assumptions: assm, outputs: out }
+      const payload = { 
+        inputs: { ...inputs, projectName }, 
+        assumptions: assm, 
+        outputs: out 
+      }
       
       // Determine API base URL dynamically
       const apiBase = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
