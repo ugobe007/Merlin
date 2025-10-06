@@ -120,11 +120,20 @@ export default function BessQuoteBuilder() {
     application: '',
     budgetRange: '',
     powerNeeds: '',
+    powerMW: 1,
     location: 'US' as Region,
     hasExistingPower: false,
     existingPowerType: '',
     timeframe: '',
-    primaryGoal: ''
+    primaryGoal: '',
+    equipmentNeeded: {
+      bess: true,
+      powerGeneration: false,
+      solar: false,
+      wind: false,
+      grid: true
+    },
+    gridConnection: 'behind' // 'front' or 'behind'
   })
 
   // persist inputs automatically
@@ -200,20 +209,20 @@ export default function BessQuoteBuilder() {
 
   // Smart Wizard Logic
   function generateSmartConfiguration() {
-    const { application, budgetRange, powerNeeds, location, hasExistingPower, existingPowerType } = wizardData
+    const { application, budgetRange, powerMW, location, equipmentNeeded, gridConnection } = wizardData
     
-    // Initialize configuration based on application type
+    // Initialize configuration based on application type and user inputs
     let config: Partial<Inputs> = {
       locationRegion: location,
-      gridMode: 'on-grid'
+      gridMode: gridConnection === 'behind' ? 'on-grid' : 'off-grid',
+      powerMW: powerMW // Use the exact power specified by user
     }
 
-    // Determine power requirements based on application
+    // Determine specific settings based on application
     switch (application) {
       case 'EV Charging':
         config = {
           ...config,
-          powerMW: powerNeeds === 'small' ? 0.5 : powerNeeds === 'medium' ? 2 : 5,
           standbyHours: 4,
           useCase: 'EV Charging Stations',
           utilization: 0.6,
@@ -224,19 +233,16 @@ export default function BessQuoteBuilder() {
       case 'Industrial Backup':
         config = {
           ...config,
-          powerMW: powerNeeds === 'small' ? 1 : powerNeeds === 'medium' ? 5 : 15,
           standbyHours: 8,
           useCase: 'Industrial Backup',
           utilization: 0.1,
-          valuePerKWh: 0.5,
-          gridMode: 'off-grid'
+          valuePerKWh: 0.5
         }
         break
 
       case 'Grid Stabilization':
         config = {
           ...config,
-          powerMW: powerNeeds === 'small' ? 2 : powerNeeds === 'medium' ? 10 : 50,
           standbyHours: 2,
           useCase: 'Grid Stabilization',
           utilization: 0.3,
@@ -247,29 +253,16 @@ export default function BessQuoteBuilder() {
       case 'Renewable Integration':
         config = {
           ...config,
-          powerMW: powerNeeds === 'small' ? 1 : powerNeeds === 'medium' ? 5 : 20,
           standbyHours: 6,
           useCase: 'Renewable Integration',
           utilization: 0.4,
           valuePerKWh: 0.2
-        }
-        
-        // Add renewable sources based on existing power
-        if (hasExistingPower && config.powerMW) {
-          if (existingPowerType === 'solar') {
-            config.solarMWp = config.powerMW * 1.5 // Oversized solar
-          } else if (existingPowerType === 'wind') {
-            config.windMW = config.powerMW * 1.2
-          } else if (existingPowerType === 'generator') {
-            config.generatorMW = config.powerMW * 0.8
-          }
         }
         break
 
       case 'Peak Shaving':
         config = {
           ...config,
-          powerMW: powerNeeds === 'small' ? 0.5 : powerNeeds === 'medium' ? 3 : 10,
           standbyHours: 3,
           useCase: 'Peak Shaving',
           utilization: 0.5,
@@ -280,7 +273,6 @@ export default function BessQuoteBuilder() {
       default:
         config = {
           ...config,
-          powerMW: 2,
           standbyHours: 4,
           useCase: 'General Purpose',
           utilization: 0.3,
@@ -288,14 +280,25 @@ export default function BessQuoteBuilder() {
         }
     }
 
-    // Adjust based on budget
-    if (budgetRange === 'under500k' && config.powerMW && config.powerMW > 2) {
-      config.powerMW = Math.min(config.powerMW, 2)
-    } else if (budgetRange === '500k-2m' && config.powerMW && config.powerMW > 8) {
-      config.powerMW = Math.min(config.powerMW, 8)
+    // Configure additional equipment based on selections
+    if (equipmentNeeded.solar) {
+      config.solarMWp = powerMW * 1.5 // Oversized solar for battery charging
+    }
+    
+    if (equipmentNeeded.wind) {
+      config.windMW = powerMW * 1.2
+    }
+    
+    if (equipmentNeeded.powerGeneration) {
+      config.generatorMW = powerMW * 0.8 // Backup generator
     }
 
-    // Set budget if known
+    // Adjust grid mode if grid equipment not selected
+    if (!equipmentNeeded.grid) {
+      config.gridMode = 'off-grid'
+    }
+
+    // Set budget if specified
     if (budgetRange !== 'flexible') {
       config.budgetKnown = true
       switch (budgetRange) {
@@ -1018,14 +1021,102 @@ export default function BessQuoteBuilder() {
               <div className="space-y-6">
                 <div className="text-center mb-6">
                   <h3 className="text-xl font-semibold text-gray-700 mb-2">
-                    Let's find the perfect BESS solution for you!
+                    Power Requirements & Equipment Selection
                   </h3>
                   <p className="text-gray-600">
-                    Answer a few quick questions and we'll automatically configure an optimal battery energy storage system.
+                    Tell us about your power needs and what equipment you require.
                   </p>
                 </div>
 
-                <div className="space-y-4">
+                <div className="space-y-6">
+                  {/* Power Requirements */}
+                  <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                    <h4 className="font-medium text-blue-800 mb-3">Power Requirements</h4>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          How much power do you need? (MW)
+                        </label>
+                        <input
+                          type="number"
+                          step="0.1"
+                          min="0.1"
+                          className="w-full p-3 border border-gray-300 rounded-lg"
+                          value={wizardData.powerMW}
+                          onChange={(e) => setWizardData({...wizardData, powerMW: parseFloat(e.target.value) || 1})}
+                          placeholder="e.g., 2.5"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Grid Connection
+                        </label>
+                        <div className="space-y-2">
+                          <label className="flex items-center">
+                            <input
+                              type="radio"
+                              name="gridConnection"
+                              checked={wizardData.gridConnection === 'behind'}
+                              onChange={() => setWizardData({...wizardData, gridConnection: 'behind'})}
+                              className="mr-2"
+                            />
+                            <span className="text-sm">Behind the meter</span>
+                          </label>
+                          <label className="flex items-center">
+                            <input
+                              type="radio"
+                              name="gridConnection"
+                              checked={wizardData.gridConnection === 'front'}
+                              onChange={() => setWizardData({...wizardData, gridConnection: 'front'})}
+                              className="mr-2"
+                            />
+                            <span className="text-sm">Front of meter</span>
+                          </label>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Equipment Selection */}
+                  <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+                    <h4 className="font-medium text-green-800 mb-3">Equipment Selection</h4>
+                    <p className="text-sm text-green-700 mb-3">Select all equipment you need for your project:</p>
+                    <div className="grid grid-cols-2 gap-3">
+                      {[
+                        { key: 'bess', label: 'BESS (Battery Energy Storage)', icon: '🔋', desc: 'Core battery system' },
+                        { key: 'powerGeneration', label: 'Power Generation', icon: '⚡', desc: 'Diesel/gas generators' },
+                        { key: 'solar', label: 'Solar Panels', icon: '☀️', desc: 'Photovoltaic systems' },
+                        { key: 'wind', label: 'Wind Turbines', icon: '�', desc: 'Wind power generation' },
+                        { key: 'grid', label: 'Grid Connection', icon: '🔌', desc: 'Utility grid integration' }
+                      ].map((equipment) => (
+                        <button
+                          key={equipment.key}
+                          className={`p-3 rounded-lg border-2 text-left transition-all ${
+                            wizardData.equipmentNeeded[equipment.key as keyof typeof wizardData.equipmentNeeded]
+                              ? 'border-green-500 bg-green-100 text-green-800'
+                              : 'border-gray-200 hover:border-gray-300 bg-white'
+                          }`}
+                          onClick={() => setWizardData({
+                            ...wizardData, 
+                            equipmentNeeded: {
+                              ...wizardData.equipmentNeeded,
+                              [equipment.key]: !wizardData.equipmentNeeded[equipment.key as keyof typeof wizardData.equipmentNeeded]
+                            }
+                          })}
+                        >
+                          <div className="flex items-center space-x-2">
+                            <span className="text-xl">{equipment.icon}</span>
+                            <div>
+                              <div className="font-medium text-sm">{equipment.label}</div>
+                              <div className="text-xs text-gray-600">{equipment.desc}</div>
+                            </div>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Application Type */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       What's your primary application?
@@ -1060,6 +1151,32 @@ export default function BessQuoteBuilder() {
                     </div>
                   </div>
 
+                  <div className="flex justify-end space-x-3">
+                    <button
+                      className="px-6 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors disabled:opacity-50"
+                      style={{ color: '#FDE047', fontWeight: 'bold', textShadow: '1px 1px 2px rgba(0,0,0,0.8)' }}
+                      disabled={!wizardData.application || !wizardData.equipmentNeeded.bess}
+                      onClick={() => setWizardStep(2)}
+                    >
+                      Next Step →
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {wizardStep === 2 && (
+              <div className="space-y-6">
+                <div className="text-center mb-6">
+                  <h3 className="text-xl font-semibold text-gray-700 mb-2">
+                    Budget & System Requirements
+                  </h3>
+                  <p className="text-gray-600">
+                    Help us understand your budget and system sizing needs.
+                  </p>
+                </div>
+
+                <div className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       What's your approximate budget range?
@@ -1088,40 +1205,15 @@ export default function BessQuoteBuilder() {
                     </div>
                   </div>
 
-                  <div className="flex justify-end space-x-3">
-                    <button
-                      className="px-6 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors disabled:opacity-50"
-                      disabled={!wizardData.application || !wizardData.budgetRange}
-                      onClick={() => setWizardStep(2)}
-                    >
-                      Next Step →
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {wizardStep === 2 && (
-              <div className="space-y-6">
-                <div className="text-center mb-6">
-                  <h3 className="text-xl font-semibold text-gray-700 mb-2">
-                    Power Requirements & Setup
-                  </h3>
-                  <p className="text-gray-600">
-                    Help us size your system correctly.
-                  </p>
-                </div>
-
-                <div className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      What size system do you need?
+                      What size system category fits your needs?
                     </label>
                     <div className="grid grid-cols-3 gap-3">
                       {[
-                        { value: 'small', label: 'Small', desc: '&lt; 2MW' },
+                        { value: 'small', label: 'Small', desc: '< 2MW' },
                         { value: 'medium', label: 'Medium', desc: '2-10MW' },
-                        { value: 'large', label: 'Large', desc: '&gt; 10MW' }
+                        { value: 'large', label: 'Large', desc: '> 10MW' }
                       ].map((size) => (
                         <button
                           key={size.value}
@@ -1155,48 +1247,6 @@ export default function BessQuoteBuilder() {
                     </select>
                   </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Do you have existing power generation?
-                    </label>
-                    <div className="flex items-center space-x-4 mb-3">
-                      <label className="flex items-center">
-                        <input
-                          type="radio"
-                          name="hasExistingPower"
-                          checked={wizardData.hasExistingPower === true}
-                          onChange={() => setWizardData({...wizardData, hasExistingPower: true})}
-                          className="mr-2"
-                        />
-                        Yes
-                      </label>
-                      <label className="flex items-center">
-                        <input
-                          type="radio"
-                          name="hasExistingPower"
-                          checked={wizardData.hasExistingPower === false}
-                          onChange={() => setWizardData({...wizardData, hasExistingPower: false})}
-                          className="mr-2"
-                        />
-                        No
-                      </label>
-                    </div>
-
-                    {wizardData.hasExistingPower && (
-                      <select
-                        className="w-full p-3 border border-gray-300 rounded-lg"
-                        value={wizardData.existingPowerType}
-                        onChange={(e) => setWizardData({...wizardData, existingPowerType: e.target.value})}
-                      >
-                        <option value="">Select type...</option>
-                        <option value="solar">Solar panels</option>
-                        <option value="wind">Wind turbines</option>
-                        <option value="generator">Diesel/gas generators</option>
-                        <option value="other">Other</option>
-                      </select>
-                    )}
-                  </div>
-
                   <div className="flex justify-between space-x-3">
                     <button
                       className="px-6 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors"
@@ -1206,7 +1256,8 @@ export default function BessQuoteBuilder() {
                     </button>
                     <button
                       className="px-6 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors disabled:opacity-50"
-                      disabled={!wizardData.powerNeeds}
+                      style={{ color: '#FDE047', fontWeight: 'bold', textShadow: '1px 1px 2px rgba(0,0,0,0.8)' }}
+                      disabled={!wizardData.budgetRange || !wizardData.powerNeeds}
                       onClick={() => setWizardStep(3)}
                     >
                       Next Step →
@@ -1275,11 +1326,25 @@ export default function BessQuoteBuilder() {
                   <div className="bg-purple-50 p-4 rounded-lg border border-purple-200">
                     <h4 className="font-medium text-purple-800 mb-2">Configuration Preview</h4>
                     <div className="text-sm text-purple-700 space-y-1">
+                      <div>• Power Required: {wizardData.powerMW} MW</div>
+                      <div>• Grid Connection: {wizardData.gridConnection === 'behind' ? 'Behind the meter' : 'Front of meter'}</div>
+                      <div>• Equipment: {Object.entries(wizardData.equipmentNeeded)
+                        .filter(([_, selected]) => selected)
+                        .map(([key, _]) => {
+                          const labels: {[k: string]: string} = {
+                            bess: 'BESS',
+                            powerGeneration: 'Power Gen',
+                            solar: 'Solar',
+                            wind: 'Wind',
+                            grid: 'Grid'
+                          }
+                          return labels[key]
+                        }).join(', ')}</div>
                       <div>• Application: {wizardData.application}</div>
                       <div>• Budget Range: {wizardData.budgetRange.replace('under500k', 'Under $500K').replace('500k-2m', '$500K-$2M').replace('2m-10m', '$2M-$10M').replace('10m+', '$10M+').replace('flexible', 'Flexible')}</div>
                       <div>• System Size: {wizardData.powerNeeds} ({wizardData.powerNeeds === 'small' ? '< 2MW' : wizardData.powerNeeds === 'medium' ? '2-10MW' : '> 10MW'})</div>
                       <div>• Location: {wizardData.location}</div>
-                      {wizardData.hasExistingPower && <div>• Existing Power: {wizardData.existingPowerType}</div>}
+                      {wizardData.primaryGoal && <div>• Primary Goal: {wizardData.primaryGoal.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}</div>}
                     </div>
                   </div>
 
@@ -1292,6 +1357,7 @@ export default function BessQuoteBuilder() {
                     </button>
                     <button
                       className="px-8 py-3 bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-lg hover:from-purple-600 hover:to-purple-700 transition-all font-medium shadow-lg transform hover:scale-105"
+                      style={{ color: '#FDE047', fontWeight: 'bold', textShadow: '1px 1px 2px rgba(0,0,0,0.8)' }}
                       onClick={generateSmartConfiguration}
                     >
                       🪄 Generate My BESS Configuration
