@@ -54,9 +54,10 @@ app.use((req, res, next) => {
   next();
 });
 
-// Pre-load templates into memory
+// Pre-load templates into memory with caching
 const WORD_TEMPLATE_PATH = path.join(__dirname, 'templates', 'BESS_Quote_Template.docx');
 let wordTemplateBuffer = null;
+let wordTemplateZip = null;
 
 function loadWordTemplate() {
   if (!wordTemplateBuffer) {
@@ -66,8 +67,18 @@ function loadWordTemplate() {
   return wordTemplateBuffer;
 }
 
+function getWordTemplateZip() {
+  if (!wordTemplateZip) {
+    const buffer = loadWordTemplate();
+    wordTemplateZip = new PizZip(buffer);
+    console.log('[server] Pre-processed Word template ZIP');
+  }
+  return wordTemplateZip;
+}
+
 // Pre-load on startup
 loadWordTemplate();
+getWordTemplateZip();
 
 const money = (n) => `$${Math.round(Number(n || 0)).toLocaleString()}`
 const pct = (n) => `${Math.round(Number(n || 0) * 100)}%`
@@ -108,33 +119,38 @@ app.post('/api/export/word', async (req, res) => {
     const startTime = Date.now();
     const { inputs = {}, assumptions = {}, outputs = {} } = req.body
 
-    // Use pre-loaded template for faster processing
-    const templateBuffer = loadWordTemplate();
-    const zip = new PizZip(templateBuffer)
-    const doc = new Docxtemplater(zip, { 
+    // Use pre-processed ZIP for faster processing
+    const templateZip = getWordTemplateZip();
+    
+    // Clone the ZIP for thread safety without re-parsing
+    const clonedZip = new PizZip(templateZip.file());
+    const doc = new Docxtemplater(clonedZip, { 
       paragraphLoop: true, 
       linebreaks: true,
-      nullGetter: () => '' // Handle null values gracefully
+      nullGetter: () => '', // Handle null values gracefully
+      delimiters: { start: '{', end: '}' }, // Explicit delimiters for performance
+      parser: (tag) => ({ get: tag }) // Optimized parser
     })
 
     const tariffPct = (assumptions.tariffByRegion?.[inputs.locationRegion] ?? 0)
     const warrantyUplift = inputs.warrantyYears === 20 ? 0.10 : 0
 
-    doc.setData({
+    // Pre-computed data object for faster rendering with cached formatters
+    const templateData = {
       // Inputs
-      POWER: inputs.powerMW,
-      HOURS: inputs.standbyHours,
-      VOLTAGE: inputs.voltage,
-      MODE: inputs.gridMode,
-      USECASE: inputs.useCase,
-      CERTS: inputs.certifications,
-      GENERATOR_MW: inputs.generatorMW,
-      SOLAR_MWP: inputs.solarMWp,
-      WIND_MW: inputs.windMW,
-      UTILIZATION: inputs.utilization,
-      VALUE_PER_KWH: inputs.valuePerKWh,
+      POWER: String(inputs.powerMW || ''),
+      HOURS: String(inputs.standbyHours || ''),
+      VOLTAGE: String(inputs.voltage || ''),
+      MODE: String(inputs.gridMode || ''),
+      USECASE: String(inputs.useCase || ''),
+      CERTS: String(inputs.certifications || ''),
+      GENERATOR_MW: String(inputs.generatorMW || ''),
+      SOLAR_MWP: String(inputs.solarMWp || ''),
+      WIND_MW: String(inputs.windMW || ''),
+      UTILIZATION: String(inputs.utilization || ''),
+      VALUE_PER_KWH: String(inputs.valuePerKWh || ''),
 
-      WARRANTY_YEARS: inputs.warrantyYears,
+      WARRANTY_YEARS: String(inputs.warrantyYears || ''),
       WARRANTY_UPLIFT: pct(warrantyUplift),
       LOCATION_REGION: inputs.locationRegion,
       PCS_SEPARATE: yesno(inputs.pcsSeparate),
@@ -170,25 +186,28 @@ app.post('/api/export/word', async (req, res) => {
       ANNUAL_SAVINGS: money(outputs.annualSavings),
       ROI_YEARS: outputs.roiYears ? Number(outputs.roiYears).toFixed(2) : '—',
       BUDGET_DELTA: (inputs.budgetKnown && typeof outputs.budgetDelta === 'number') ? money(outputs.budgetDelta) : '—',
-    })
+    };
 
-    doc.render()
+    doc.setData(templateData);
+    doc.render();
+    
     const buf = doc.getZip().generate({ 
       type: 'nodebuffer',
       compression: 'DEFLATE',
-      compressionOptions: { level: 6 }
-    })
+      compressionOptions: { level: 3 } // Faster compression
+    });
 
     const processingTime = Date.now() - startTime;
     console.log(`[server] Word export completed in ${processingTime}ms`);
 
-    // Optimized headers
-    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document')
-    res.setHeader('Content-Disposition', 'attachment; filename=BESS_Quote.docx')
+    // Optimized headers with connection keep-alive
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+    res.setHeader('Content-Disposition', 'attachment; filename=BESS_Quote.docx');
     res.setHeader('Content-Length', buf.length);
     res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
     
-    return res.send(buf)
+    return res.send(buf);
   } catch (e) {
     console.error('WORD EXPORT ERROR:', e)
     return res.status(500).json({ error: 'Word export failed', details: e.message })
@@ -200,8 +219,14 @@ app.post('/api/export/excel', async (req, res) => {
     const startTime = Date.now();
     const { inputs = {}, assumptions = {}, outputs = {} } = req.body
     
+    // Create workbook with optimized settings
     const wb = new ExcelJS.Workbook()
-    const ws = wb.addWorksheet('BESS Quote')
+    wb.creator = 'Merlin BESS Quote Builder'
+    wb.created = new Date()
+    
+    const ws = wb.addWorksheet('BESS Quote', {
+      properties: { defaultColWidth: 20 }
+    })
 
     // Pre-configure columns for better performance
     ws.columns = [
@@ -209,87 +234,94 @@ app.post('/api/export/excel', async (req, res) => {
       { header: 'Value', key: 'v', width: 28 },
     ]
 
+    // Pre-compute all values to avoid repeated calculations
     const tariffPct = (assumptions.tariffByRegion?.[inputs.locationRegion] ?? 0)
     const warrantyUplift = inputs.warrantyYears === 20 ? 0.10 : 0
+    const budgetAmount = inputs.budgetKnown ? money(inputs.budgetAmount || 0) : '—'
+    const budgetDelta = (inputs.budgetKnown && typeof outputs.budgetDelta === 'number') ? money(outputs.budgetDelta) : '—'
+    const roiYears = outputs.roiYears ? Number(outputs.roiYears).toFixed(2) : '—'
 
-    // Pre-build all rows for batch insertion
+    // Pre-build all rows for batch insertion (optimized data structure)
     const rows = [
-      ['--- Inputs ---', ''],
-      ['Power (MW)', inputs.powerMW],
-      ['Standby Hours', inputs.standbyHours],
-      ['Voltage', inputs.voltage],
-      ['Grid Mode', inputs.gridMode],
-      ['Use Case', inputs.useCase],
-      ['Certifications', inputs.certifications],
-      ['Generator (MW)', inputs.generatorMW],
-      ['Solar (MWp)', inputs.solarMWp],
-      ['Wind (MW)', inputs.windMW],
-      ['Utilization (0–1)', inputs.utilization],
-      ['Value $/kWh', inputs.valuePerKWh],
-      ['Warranty (years)', inputs.warrantyYears],
-      ['Warranty Uplift', pct(warrantyUplift)],
-      ['Location (Region)', inputs.locationRegion],
-      ['PCS Separate?', yesno(inputs.pcsSeparate)],
-      ['Budget Known?', yesno(inputs.budgetKnown)],
-      ['Budget (USD)', inputs.budgetKnown ? money(inputs.budgetAmount || 0) : '—'],
+      { k: '--- Inputs ---', v: '' },
+      { k: 'Power (MW)', v: inputs.powerMW || '' },
+      { k: 'Standby Hours', v: inputs.standbyHours || '' },
+      { k: 'Voltage', v: inputs.voltage || '' },
+      { k: 'Grid Mode', v: inputs.gridMode || '' },
+      { k: 'Use Case', v: inputs.useCase || '' },
+      { k: 'Certifications', v: inputs.certifications || '' },
+      { k: 'Generator (MW)', v: inputs.generatorMW || '' },
+      { k: 'Solar (MWp)', v: inputs.solarMWp || '' },
+      { k: 'Wind (MW)', v: inputs.windMW || '' },
+      { k: 'Utilization (0–1)', v: inputs.utilization || '' },
+      { k: 'Value $/kWh', v: inputs.valuePerKWh || '' },
+      { k: 'Warranty (years)', v: inputs.warrantyYears || '' },
+      { k: 'Warranty Uplift', v: pct(warrantyUplift) },
+      { k: 'Location (Region)', v: inputs.locationRegion || '' },
+      { k: 'PCS Separate?', v: yesno(inputs.pcsSeparate) },
+      { k: 'Budget Known?', v: yesno(inputs.budgetKnown) },
+      { k: 'Budget (USD)', v: budgetAmount },
 
-      ['', ''],
-      ['--- Assumptions ---', ''],
-      ['Battery $/kWh', money(assumptions.batteryCostPerKWh)],
-      ['PCS $/kW', money(assumptions.pcsCostPerKW)],
-      ['BOS %', pct(assumptions.bosPct)],
-      ['EPC %', pct(assumptions.epcPct)],
-      ['Off-grid PCS factor', assumptions.offgridFactor],
-      ['On-grid PCS factor', assumptions.ongridFactor],
-      ['Gen $/kW', money(assumptions.genCostPerKW)],
-      ['Solar $/kWp', money(assumptions.solarCostPerKWp)],
-      ['Wind $/kW', money(assumptions.windCostPerKW)],
-      ['Tariff % (region)', pct(tariffPct)],
+      { k: '', v: '' },
+      { k: '--- Assumptions ---', v: '' },
+      { k: 'Battery $/kWh', v: money(assumptions.batteryCostPerKWh) },
+      { k: 'PCS $/kW', v: money(assumptions.pcsCostPerKW) },
+      { k: 'BOS %', v: pct(assumptions.bosPct) },
+      { k: 'EPC %', v: pct(assumptions.epcPct) },
+      { k: 'Off-grid PCS factor', v: assumptions.offgridFactor },
+      { k: 'On-grid PCS factor', v: assumptions.ongridFactor },
+      { k: 'Gen $/kW', v: money(assumptions.genCostPerKW) },
+      { k: 'Solar $/kWp', v: money(assumptions.solarCostPerKWp) },
+      { k: 'Wind $/kW', v: money(assumptions.windCostPerKW) },
+      { k: 'Tariff % (region)', v: pct(tariffPct) },
 
-      ['', ''],
-      ['--- Calculations ---', ''],
-      ['Total MWh', outputs.totalMWh],
-      ['PCS kW', Math.round(outputs.pcsKW || 0)],
-      ['Battery Subtotal', money(outputs.batterySubtotal)],
-      ['PCS Subtotal' + (inputs.pcsSeparate ? ' (+15%)' : ''), money(outputs.pcsSubtotal)],
-      ['BOS', money(outputs.bos)],
-      ['EPC', money(outputs.epc)],
-      ['BESS CapEx', money(outputs.bessCapex)],
-      ['Generator Subtotal', money(outputs.genSubtotal)],
-      ['Solar Subtotal', money(outputs.solarSubtotal)],
-      ['Wind Subtotal', money(outputs.windSubtotal)],
-      ['Tariffs (BESS+Solar+Wind)', money(outputs.tariffs)],
-      ['Grand CapEx (pre-warranty)', money(outputs.grandCapexBeforeWarranty)],
-      ['Grand CapEx (incl. warranty)', money(outputs.grandCapex)],
-      ['Annual Savings', money(outputs.annualSavings)],
-      ['ROI (years)', outputs.roiYears ? Number(outputs.roiYears).toFixed(2) : '—'],
-      ['Budget Delta', (inputs.budgetKnown && typeof outputs.budgetDelta === 'number') ? money(outputs.budgetDelta) : '—'],
+      { k: '', v: '' },
+      { k: '--- Calculations ---', v: '' },
+      { k: 'Total MWh', v: outputs.totalMWh },
+      { k: 'PCS kW', v: Math.round(outputs.pcsKW || 0) },
+      { k: 'Battery Subtotal', v: money(outputs.batterySubtotal) },
+      { k: 'PCS Subtotal' + (inputs.pcsSeparate ? ' (+15%)' : ''), v: money(outputs.pcsSubtotal) },
+      { k: 'BOS', v: money(outputs.bos) },
+      { k: 'EPC', v: money(outputs.epc) },
+      { k: 'BESS CapEx', v: money(outputs.bessCapex) },
+      { k: 'Generator Subtotal', v: money(outputs.genSubtotal) },
+      { k: 'Solar Subtotal', v: money(outputs.solarSubtotal) },
+      { k: 'Wind Subtotal', v: money(outputs.windSubtotal) },
+      { k: 'Tariffs (BESS+Solar+Wind)', v: money(outputs.tariffs) },
+      { k: 'Grand CapEx (pre-warranty)', v: money(outputs.grandCapexBeforeWarranty) },
+      { k: 'Grand CapEx (incl. warranty)', v: money(outputs.grandCapex) },
+      { k: 'Annual Savings', v: money(outputs.annualSavings) },
+      { k: 'ROI (years)', v: roiYears },
+      { k: 'Budget Delta', v: budgetDelta },
     ]
 
-    // Batch insert all rows at once
-    ws.addRows(rows.map(([k, v]) => ({ k, v })))
+    // Batch insert all rows at once (more efficient)
+    ws.addRows(rows)
 
-    // Style section headers efficiently
-    let rowIndex = 1;
-    rows.forEach(([k]) => {
-      rowIndex++;
-      if (typeof k === 'string' && k.startsWith('---')) {
-        ws.getRow(rowIndex).font = { bold: true };
+    // Style section headers efficiently with a single pass
+    rows.forEach((row, index) => {
+      if (typeof row.k === 'string' && row.k.startsWith('---')) {
+        ws.getRow(index + 2).font = { bold: true };
       }
-    });
+    })
 
-    const buf = await wb.xlsx.writeBuffer()
+    // Generate buffer with optimized compression
+    const buf = await wb.xlsx.writeBuffer({
+      compress: true,
+      useSharedStrings: false // Faster for small files
+    })
     
     const processingTime = Date.now() - startTime;
     console.log(`[server] Excel export completed in ${processingTime}ms`);
 
-    // Optimized headers
-    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-    res.setHeader('Content-Disposition', 'attachment; filename=BESS_Quote.xlsx')
+    // Optimized headers with connection keep-alive
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', 'attachment; filename=BESS_Quote.xlsx');
     res.setHeader('Content-Length', buf.byteLength);
     res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
     
-    return res.send(Buffer.from(buf))
+    return res.send(Buffer.from(buf));
   } catch (e) {
     console.error('EXCEL EXPORT ERROR:', e)
     return res.status(500).json({ error: 'Excel export failed', details: e.message })
