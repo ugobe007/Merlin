@@ -1,7 +1,16 @@
 const Database = require('better-sqlite3');
-const { v4: uuidv4 } = require('uuid');
 const path = require('path');
 const fs = require('fs');
+const crypto = require('crypto');
+
+// Function to generate UUID v4 using crypto
+function generateUUID() {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    const r = Math.random() * 16 | 0;
+    const v = c === 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+}
 
 class QuoteDatabase {
   constructor() {
@@ -171,7 +180,7 @@ class QuoteDatabase {
     `);
 
     categories.forEach(cat => {
-      insertCategory.run(uuidv4(), cat.name, cat.description);
+      insertCategory.run(generateUUID(), cat.name, cat.description);
     });
 
     // Insert default materials
@@ -220,13 +229,13 @@ class QuoteDatabase {
     `);
 
     materials.forEach(mat => {
-      insertMaterial.run(uuidv4(), mat.category, mat.name, mat.specifications, mat.cost_per_unit, mat.unit);
+      insertMaterial.run(generateUUID(), mat.category, mat.name, mat.specifications, mat.cost_per_unit, mat.unit);
     });
   }
 
   // Vendor operations
   createVendor(vendorData) {
-    const id = uuidv4();
+    const id = generateUUID();
     const stmt = this.db.prepare(`
       INSERT INTO vendors (id, name, contact_person, email, phone, address, website, notes)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
@@ -280,7 +289,7 @@ class QuoteDatabase {
 
   // Product operations
   createProduct(productData) {
-    const id = uuidv4();
+    const id = generateUUID();
     const stmt = this.db.prepare(`
       INSERT INTO products (
         id, vendor_id, category_id, name, model, specifications, 
@@ -340,7 +349,7 @@ class QuoteDatabase {
 
   // Vendor quote operations
   createVendorQuote(quoteData) {
-    const id = uuidv4();
+    const id = generateUUID();
     const stmt = this.db.prepare(`
       INSERT INTO vendor_quotes (
         id, vendor_id, quote_number, quote_date, valid_until,
@@ -386,7 +395,7 @@ class QuoteDatabase {
 
   // BESS configuration operations
   saveBessConfiguration(configData) {
-    const id = uuidv4();
+    const id = generateUUID();
     const stmt = this.db.prepare(`
       INSERT INTO bess_configurations (
         id, name, power_mw, standby_hours, grid_mode, use_case, 
