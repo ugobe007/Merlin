@@ -76,7 +76,7 @@ app.use((req, res, next) => {
 });
 
 // Pre-load templates into memory
-const WORD_TEMPLATE_PATH = path.join(__dirname, 'templates', 'BESS_Quote_Template.docx');
+const WORD_TEMPLATE_PATH = path.join(__dirname, 'templates', 'BESS_Quote_Template_Fixed.docx');
 let wordTemplateBuffer = null;
 
 function loadWordTemplate() {
@@ -270,10 +270,24 @@ app.post('/api/export/word', async (req, res) => {
       GRAND_CAPEX: money(outputs.grandCapex),
       ANNUAL_SAVINGS: money(outputs.annualSavings),
       ROI_YEARS: outputs.roiYears ? Number(outputs.roiYears).toFixed(2) : '—',
-      BUDGET_DELTA: (inputs.budgetKnown && typeof outputs.budgetDelta === 'number') ? money(outputs.budgetDelta) : '—'
+      BUDGET_DELTA: (inputs.budgetKnown && typeof outputs.budgetDelta === 'number') ? money(outputs.budgetDelta) : '—',
+      
+      // Additional fields for new template
+      CLIENT_NAME: String(inputs.clientName || 'Client Name'),
+      QUOTE_DATE: new Date().toLocaleDateString(),
+      SYSTEM_COST: money(outputs.bessCapex || 0),
+      INSTALLATION_COST: money(outputs.epc || 0),
+      TOTAL_COST: money(outputs.grandCapex || 0)
     };
     console.timeEnd('export:word:preprocess');
     console.log('[export:word] Template data prepared, field count:', Object.keys(templateData).length);
+    console.log('[export:word] Template data sample:', {
+      PROJECT_NAME: templateData.PROJECT_NAME,
+      SYSTEM_SIZE_KW: templateData.SYSTEM_SIZE_KW,
+      TOTAL_COST: templateData.TOTAL_COST,
+      GRAND_CAPEX: templateData.GRAND_CAPEX,
+      '...': 'and more fields'
+    });
 
     console.time('export:word:template');
     // Check if template exists and load it
