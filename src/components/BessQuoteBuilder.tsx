@@ -265,7 +265,7 @@ export default function BessQuoteBuilder() {
       // Determine API base URL dynamically
       const apiBase = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
         ? 'http://localhost:5001'
-        : `${window.location.protocol}//${window.location.hostname}:5001`;
+        : '';
       
       // Add timeout and better error handling
       const controller = new AbortController()
@@ -312,7 +312,7 @@ export default function BessQuoteBuilder() {
       // Determine API base URL dynamically
       const apiBase = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
         ? 'http://localhost:5001'
-        : `${window.location.protocol}//${window.location.hostname}:5001`;
+        : '';
       
       const controller = new AbortController()
       const timeoutId = setTimeout(() => controller.abort(), 30000)
