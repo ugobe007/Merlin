@@ -1,7 +1,0 @@
-services:
-  - type: web
-    name: merlin-bess-quote-builder
-    env: docker
-    envVars:
-      - key: NODE_ENV
-        value: production
