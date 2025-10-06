@@ -396,8 +396,9 @@ if (process.env.NODE_ENV === 'production') {
 }
 
 const PORT = process.env.PORT || 5001
-app.listen(PORT, () => {
-  console.log(`[server] Optimized API listening on http://localhost:${PORT}`)
+const HOST = process.env.HOST || '0.0.0.0'
+app.listen(PORT, HOST, () => {
+  console.log(`[server] Optimized API listening on http://${HOST}:${PORT}`)
   console.log(`[server] Environment: ${process.env.NODE_ENV || 'development'}`)
   console.log(`[server] Serving static files from: ${path.resolve(process.cwd(), 'dist')}`)
 })
