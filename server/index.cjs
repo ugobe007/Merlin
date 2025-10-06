@@ -311,8 +311,7 @@ app.post('/api/export/word', async (req, res) => {
       paragraphLoop: true, 
       linebreaks: true,
       nullGetter: () => '',
-      delimiters: { start: '{', end: '}' },
-      parser: (tag) => ({ get: tag }) // Optimized parser
+      delimiters: { start: '{', end: '}' }
     });
     console.timeEnd('export:word:template');
     console.log('[export:word] Docxtemplater initialized successfully');
@@ -349,6 +348,23 @@ app.post('/api/export/word', async (req, res) => {
   } catch (error) {
     console.error('[export:word] Export failed:', error.message);
     console.error('[export:word] Stack trace:', error.stack);
+    
+    // Handle Docxtemplater multi errors specifically
+    if (error.name === 'TemplateError' || error.message === 'Multi error') {
+      console.error('[export:word] Template errors:', error.properties);
+      if (error.properties && error.properties.errors) {
+        error.properties.errors.forEach((err, index) => {
+          console.error(`[export:word] Error ${index + 1}:`, {
+            message: err.message,
+            name: err.name,
+            part: err.properties?.part,
+            id: err.properties?.id,
+            explanation: err.properties?.explanation
+          });
+        });
+      }
+    }
+    
     console.timeEnd('export:word:total');
     
     // Return detailed error for debugging
@@ -357,7 +373,8 @@ app.post('/api/export/word', async (req, res) => {
       details: error.message,
       templatePath: WORD_TEMPLATE_PATH,
       templateExists: fs.existsSync(WORD_TEMPLATE_PATH),
-      environment: process.env.NODE_ENV || 'development'
+      environment: process.env.NODE_ENV || 'development',
+      templateErrors: error.properties && error.properties.errors ? error.properties.errors : null
     });
   }
 });
