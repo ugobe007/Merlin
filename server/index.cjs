@@ -654,17 +654,38 @@ app.post('/api/export/excel', async (req, res) => {
     footerCell.font = { size: 10, italic: true, color: { argb: '666666' }, name: 'Helvetica' };
     footerCell.alignment = { horizontal: 'center' };
 
-    // Add Merlin branding in lower right corner
+    // Add Merlin logo in lower right corner
     const brandingRow = currentRow + 2;
-    const brandingCell = ws.getCell(`E${brandingRow}`);
-    brandingCell.value = '⚡ Merlin';
-    brandingCell.font = { size: 14, bold: true, color: { argb: colors.darkBlue }, name: 'Helvetica' };
-    brandingCell.alignment = { horizontal: 'right', vertical: 'middle' };
-    brandingCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: colors.headerBlue } };
-    brandingCell.border = {
-      top: { style: 'thick' }, bottom: { style: 'thick' },
-      left: { style: 'thick' }, right: { style: 'thick' }
-    };
+    
+    try {
+      // Add the logo image
+      const logoBuffer = fs.readFileSync(path.join(__dirname, 'merlin-logo.png'));
+      const logoImageId = wb.addImage({
+        buffer: logoBuffer,
+        extension: 'png',
+      });
+      
+      // Position the logo in the lower right
+      ws.addImage(logoImageId, {
+        tl: { col: 4.2, row: brandingRow - 1 }, // Position in column E
+        ext: { width: 60, height: 60 }, // Size in pixels
+        editAs: 'oneCell'
+      });
+
+      // Add text branding next to logo
+      const brandingCell = ws.getCell(`D${brandingRow}`);
+      brandingCell.value = 'Powered by Merlin';
+      brandingCell.font = { size: 12, bold: true, color: { argb: colors.darkBlue }, name: 'Helvetica' };
+      brandingCell.alignment = { horizontal: 'right', vertical: 'middle' };
+    } catch (logoError) {
+      console.warn('[server] Could not add logo to Excel, falling back to text:', logoError.message);
+      // Fallback to text branding if logo fails
+      const brandingCell = ws.getCell(`E${brandingRow}`);
+      brandingCell.value = '⚡ Merlin';
+      brandingCell.font = { size: 14, bold: true, color: { argb: colors.darkBlue }, name: 'Helvetica' };
+      brandingCell.alignment = { horizontal: 'right', vertical: 'middle' };
+      brandingCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: colors.headerBlue } };
+    }
 
     const buf = await wb.xlsx.writeBuffer()
     
