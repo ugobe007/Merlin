@@ -11,9 +11,7 @@ const DatabaseTest: React.FC<DatabaseTestProps> = ({ isOpen, onClose }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const API_BASE = process.env.NODE_ENV === 'development' 
-    ? `http://localhost:5001/api/db`
-    : '/api/db';
+  const API_BASE = '/api/db';
 
   const testAPI = async () => {
     setLoading(true);

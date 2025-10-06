@@ -8,6 +8,13 @@ A comprehensive web application for creating professional BESS quotes with advan
 
 ## ✨ Features
 
+### 🪄 **Smart BESS Wizard**
+- **Intelligent Configuration**: Automatically generates optimal BESS systems based on minimal input
+- **Application-Based Sizing**: EV charging, industrial backup, grid stabilization, renewable integration
+- **Budget-Aware Recommendations**: Scales systems to fit budget constraints
+- **Integration Support**: Incorporates existing solar, wind, and generator systems
+- **Three-Step Process**: Simple guided workflow for complex configurations
+
 ### 📊 **Advanced Quote Builder**
 - **Smart Calculations**: Automatic BESS sizing based on power and duration requirements
 - **Regional Support**: US, UK, EU, and international configurations

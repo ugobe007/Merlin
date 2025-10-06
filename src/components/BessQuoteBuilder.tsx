@@ -114,6 +114,18 @@ export default function BessQuoteBuilder() {
   const [showLoadProject, setShowLoadProject] = useState(false)
   const [currentPrice, setCurrentPrice] = useState<number | null>(0.12)
   const [magicalExport, setMagicalExport] = useState(false)
+  const [showSmartWizard, setShowSmartWizard] = useState(false)
+  const [wizardStep, setWizardStep] = useState(1)
+  const [wizardData, setWizardData] = useState({
+    application: '',
+    budgetRange: '',
+    powerNeeds: '',
+    location: 'US' as Region,
+    hasExistingPower: false,
+    existingPowerType: '',
+    timeframe: '',
+    primaryGoal: ''
+  })
 
   // persist inputs automatically
   useEffect(() => {
@@ -184,6 +196,140 @@ export default function BessQuoteBuilder() {
     setAssm(nextAssm)
     persistAssumptions(nextAssm)
     setOut(calc(inputs, nextAssm))
+  }
+
+  // Smart Wizard Logic
+  function generateSmartConfiguration() {
+    const { application, budgetRange, powerNeeds, location, hasExistingPower, existingPowerType } = wizardData
+    
+    // Initialize configuration based on application type
+    let config: Partial<Inputs> = {
+      locationRegion: location,
+      gridMode: 'on-grid'
+    }
+
+    // Determine power requirements based on application
+    switch (application) {
+      case 'EV Charging':
+        config = {
+          ...config,
+          powerMW: powerNeeds === 'small' ? 0.5 : powerNeeds === 'medium' ? 2 : 5,
+          standbyHours: 4,
+          useCase: 'EV Charging Stations',
+          utilization: 0.6,
+          valuePerKWh: 0.35
+        }
+        break
+      
+      case 'Industrial Backup':
+        config = {
+          ...config,
+          powerMW: powerNeeds === 'small' ? 1 : powerNeeds === 'medium' ? 5 : 15,
+          standbyHours: 8,
+          useCase: 'Industrial Backup',
+          utilization: 0.1,
+          valuePerKWh: 0.5,
+          gridMode: 'off-grid'
+        }
+        break
+
+      case 'Grid Stabilization':
+        config = {
+          ...config,
+          powerMW: powerNeeds === 'small' ? 2 : powerNeeds === 'medium' ? 10 : 50,
+          standbyHours: 2,
+          useCase: 'Grid Stabilization',
+          utilization: 0.3,
+          valuePerKWh: 0.25
+        }
+        break
+
+      case 'Renewable Integration':
+        config = {
+          ...config,
+          powerMW: powerNeeds === 'small' ? 1 : powerNeeds === 'medium' ? 5 : 20,
+          standbyHours: 6,
+          useCase: 'Renewable Integration',
+          utilization: 0.4,
+          valuePerKWh: 0.2
+        }
+        
+        // Add renewable sources based on existing power
+        if (hasExistingPower && config.powerMW) {
+          if (existingPowerType === 'solar') {
+            config.solarMWp = config.powerMW * 1.5 // Oversized solar
+          } else if (existingPowerType === 'wind') {
+            config.windMW = config.powerMW * 1.2
+          } else if (existingPowerType === 'generator') {
+            config.generatorMW = config.powerMW * 0.8
+          }
+        }
+        break
+
+      case 'Peak Shaving':
+        config = {
+          ...config,
+          powerMW: powerNeeds === 'small' ? 0.5 : powerNeeds === 'medium' ? 3 : 10,
+          standbyHours: 3,
+          useCase: 'Peak Shaving',
+          utilization: 0.5,
+          valuePerKWh: 0.4
+        }
+        break
+
+      default:
+        config = {
+          ...config,
+          powerMW: 2,
+          standbyHours: 4,
+          useCase: 'General Purpose',
+          utilization: 0.3,
+          valuePerKWh: 0.25
+        }
+    }
+
+    // Adjust based on budget
+    if (budgetRange === 'under500k' && config.powerMW && config.powerMW > 2) {
+      config.powerMW = Math.min(config.powerMW, 2)
+    } else if (budgetRange === '500k-2m' && config.powerMW && config.powerMW > 8) {
+      config.powerMW = Math.min(config.powerMW, 8)
+    }
+
+    // Set budget if known
+    if (budgetRange !== 'flexible') {
+      config.budgetKnown = true
+      switch (budgetRange) {
+        case 'under500k':
+          config.budgetAmount = 400000
+          break
+        case '500k-2m':
+          config.budgetAmount = 1500000
+          break
+        case '2m-10m':
+          config.budgetAmount = 6000000
+          break
+        case '10m+':
+          config.budgetAmount = 15000000
+          break
+      }
+    }
+
+    // Apply configuration
+    const nextInputs = { ...inputs, ...config }
+    setInputs(nextInputs)
+    setOut(calc(nextInputs, assm))
+    
+    // Set project name based on configuration
+    setProjectName(`${application} - ${config.powerMW}MW System`)
+    
+    // Close wizard
+    setShowSmartWizard(false)
+    setWizardStep(1)
+    
+    // Play magic sound and show feedback
+    playMagicWandSound()
+    setMagicalExport(true)
+    setTimeout(() => setMagicalExport(false), 2000)
   }
 
   function applyOverrides(obj: any) {
@@ -478,6 +624,12 @@ export default function BessQuoteBuilder() {
             onClick={() => setShowUserProfile(true)}
           >
             👤 User Profile
+          </button>
+          <button 
+            className="px-4 py-2 rounded-lg bg-gradient-to-r from-purple-400 to-purple-500 text-yellow-300 hover:from-purple-500 hover:to-purple-600 hover:text-yellow-200 transition-all font-medium shadow-lg transform hover:scale-105"
+            onClick={() => setShowSmartWizard(true)}
+          >
+            🪄 Smart Wizard
           </button>
         </div>
         
@@ -841,6 +993,312 @@ export default function BessQuoteBuilder() {
           alert(`Loaded quote: ${quote.project_name}`);
         }}
       />
+
+      {/* Smart Wizard Modal */}
+      {showSmartWizard && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg max-w-3xl w-full mx-4 max-h-[80vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-2xl font-bold text-gray-800 flex items-center">
+                🪄 Smart BESS Wizard
+              </h2>
+              <button 
+                className="text-gray-500 hover:text-gray-700 text-2xl"
+                onClick={() => {setShowSmartWizard(false); setWizardStep(1)}}
+              >
+                ×
+              </button>
+            </div>
+
+            {wizardStep === 1 && (
+              <div className="space-y-6">
+                <div className="text-center mb-6">
+                  <h3 className="text-xl font-semibold text-gray-700 mb-2">
+                    Let's find the perfect BESS solution for you!
+                  </h3>
+                  <p className="text-gray-600">
+                    Answer a few quick questions and we'll automatically configure an optimal battery energy storage system.
+                  </p>
+                </div>
+
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      What's your primary application?
+                    </label>
+                    <div className="grid grid-cols-2 gap-3">
+                      {[
+                        { value: 'EV Charging', icon: '🔌', desc: 'Electric vehicle charging stations' },
+                        { value: 'Industrial Backup', icon: '🏭', desc: 'Emergency power for facilities' },
+                        { value: 'Grid Stabilization', icon: '⚡', desc: 'Grid frequency regulation' },
+                        { value: 'Renewable Integration', icon: '🌱', desc: 'Solar/wind energy storage' },
+                        { value: 'Peak Shaving', icon: '📈', desc: 'Reduce peak demand charges' },
+                        { value: 'Other', icon: '❓', desc: 'Custom application' }
+                      ].map((app) => (
+                        <button
+                          key={app.value}
+                          className={`p-3 rounded-lg border-2 text-left transition-all ${
+                            wizardData.application === app.value
+                              ? 'border-purple-500 bg-purple-50 text-purple-800'
+                              : 'border-gray-200 hover:border-gray-300'
+                          }`}
+                          onClick={() => setWizardData({...wizardData, application: app.value})}
+                        >
+                          <div className="flex items-center space-x-2">
+                            <span className="text-xl">{app.icon}</span>
+                            <div>
+                              <div className="font-medium">{app.value}</div>
+                              <div className="text-sm text-gray-600">{app.desc}</div>
+                            </div>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      What's your approximate budget range?
+                    </label>
+                    <div className="grid grid-cols-2 gap-3">
+                      {[
+                        { value: 'under500k', label: 'Under $500K', desc: 'Small commercial' },
+                        { value: '500k-2m', label: '$500K - $2M', desc: 'Medium commercial' },
+                        { value: '2m-10m', label: '$2M - $10M', desc: 'Large commercial' },
+                        { value: '10m+', label: '$10M+', desc: 'Utility scale' },
+                        { value: 'flexible', label: 'Flexible', desc: 'Show me options' }
+                      ].map((budget) => (
+                        <button
+                          key={budget.value}
+                          className={`p-3 rounded-lg border-2 text-left transition-all ${
+                            wizardData.budgetRange === budget.value
+                              ? 'border-purple-500 bg-purple-50 text-purple-800'
+                              : 'border-gray-200 hover:border-gray-300'
+                          }`}
+                          onClick={() => setWizardData({...wizardData, budgetRange: budget.value})}
+                        >
+                          <div className="font-medium">{budget.label}</div>
+                          <div className="text-sm text-gray-600">{budget.desc}</div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end space-x-3">
+                    <button
+                      className="px-6 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors disabled:opacity-50"
+                      disabled={!wizardData.application || !wizardData.budgetRange}
+                      onClick={() => setWizardStep(2)}
+                    >
+                      Next Step →
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {wizardStep === 2 && (
+              <div className="space-y-6">
+                <div className="text-center mb-6">
+                  <h3 className="text-xl font-semibold text-gray-700 mb-2">
+                    Power Requirements & Setup
+                  </h3>
+                  <p className="text-gray-600">
+                    Help us size your system correctly.
+                  </p>
+                </div>
+
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      What size system do you need?
+                    </label>
+                    <div className="grid grid-cols-3 gap-3">
+                      {[
+                        { value: 'small', label: 'Small', desc: '&lt; 2MW' },
+                        { value: 'medium', label: 'Medium', desc: '2-10MW' },
+                        { value: 'large', label: 'Large', desc: '&gt; 10MW' }
+                      ].map((size) => (
+                        <button
+                          key={size.value}
+                          className={`p-3 rounded-lg border-2 text-center transition-all ${
+                            wizardData.powerNeeds === size.value
+                              ? 'border-purple-500 bg-purple-50 text-purple-800'
+                              : 'border-gray-200 hover:border-gray-300'
+                          }`}
+                          onClick={() => setWizardData({...wizardData, powerNeeds: size.value})}
+                        >
+                          <div className="font-medium">{size.label}</div>
+                          <div className="text-sm text-gray-600">{size.desc}</div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Where is your project located?
+                    </label>
+                    <select
+                      className="w-full p-3 border border-gray-300 rounded-lg"
+                      value={wizardData.location}
+                      onChange={(e) => setWizardData({...wizardData, location: e.target.value as Region})}
+                    >
+                      <option value="US">United States</option>
+                      <option value="UK">United Kingdom</option>
+                      <option value="EU">European Union</option>
+                      <option value="Other">Other</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Do you have existing power generation?
+                    </label>
+                    <div className="flex items-center space-x-4 mb-3">
+                      <label className="flex items-center">
+                        <input
+                          type="radio"
+                          name="hasExistingPower"
+                          checked={wizardData.hasExistingPower === true}
+                          onChange={() => setWizardData({...wizardData, hasExistingPower: true})}
+                          className="mr-2"
+                        />
+                        Yes
+                      </label>
+                      <label className="flex items-center">
+                        <input
+                          type="radio"
+                          name="hasExistingPower"
+                          checked={wizardData.hasExistingPower === false}
+                          onChange={() => setWizardData({...wizardData, hasExistingPower: false})}
+                          className="mr-2"
+                        />
+                        No
+                      </label>
+                    </div>
+
+                    {wizardData.hasExistingPower && (
+                      <select
+                        className="w-full p-3 border border-gray-300 rounded-lg"
+                        value={wizardData.existingPowerType}
+                        onChange={(e) => setWizardData({...wizardData, existingPowerType: e.target.value})}
+                      >
+                        <option value="">Select type...</option>
+                        <option value="solar">Solar panels</option>
+                        <option value="wind">Wind turbines</option>
+                        <option value="generator">Diesel/gas generators</option>
+                        <option value="other">Other</option>
+                      </select>
+                    )}
+                  </div>
+
+                  <div className="flex justify-between space-x-3">
+                    <button
+                      className="px-6 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors"
+                      onClick={() => setWizardStep(1)}
+                    >
+                      ← Back
+                    </button>
+                    <button
+                      className="px-6 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors disabled:opacity-50"
+                      disabled={!wizardData.powerNeeds}
+                      onClick={() => setWizardStep(3)}
+                    >
+                      Next Step →
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {wizardStep === 3 && (
+              <div className="space-y-6">
+                <div className="text-center mb-6">
+                  <h3 className="text-xl font-semibold text-gray-700 mb-2">
+                    Final Details
+                  </h3>
+                  <p className="text-gray-600">
+                    Just a few more details to optimize your configuration.
+                  </p>
+                </div>
+
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      What's your project timeframe?
+                    </label>
+                    <select
+                      className="w-full p-3 border border-gray-300 rounded-lg"
+                      value={wizardData.timeframe}
+                      onChange={(e) => setWizardData({...wizardData, timeframe: e.target.value})}
+                    >
+                      <option value="">Select timeframe...</option>
+                      <option value="immediate">Immediate (&lt; 3 months)</option>
+                      <option value="short">Short term (3-6 months)</option>
+                      <option value="medium">Medium term (6-12 months)</option>
+                      <option value="long">Long term (&gt; 12 months)</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      What's your primary goal?
+                    </label>
+                    <div className="grid grid-cols-2 gap-3">
+                      {[
+                        { value: 'cost-savings', label: 'Cost Savings', desc: 'Reduce energy bills' },
+                        { value: 'reliability', label: 'Reliability', desc: 'Backup power security' },
+                        { value: 'sustainability', label: 'Sustainability', desc: 'Environmental goals' },
+                        { value: 'compliance', label: 'Compliance', desc: 'Regulatory requirements' }
+                      ].map((goal) => (
+                        <button
+                          key={goal.value}
+                          className={`p-3 rounded-lg border-2 text-left transition-all ${
+                            wizardData.primaryGoal === goal.value
+                              ? 'border-purple-500 bg-purple-50 text-purple-800'
+                              : 'border-gray-200 hover:border-gray-300'
+                          }`}
+                          onClick={() => setWizardData({...wizardData, primaryGoal: goal.value})}
+                        >
+                          <div className="font-medium">{goal.label}</div>
+                          <div className="text-sm text-gray-600">{goal.desc}</div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="bg-purple-50 p-4 rounded-lg border border-purple-200">
+                    <h4 className="font-medium text-purple-800 mb-2">Configuration Preview</h4>
+                    <div className="text-sm text-purple-700 space-y-1">
+                      <div>• Application: {wizardData.application}</div>
+                      <div>• Budget Range: {wizardData.budgetRange.replace('under500k', 'Under $500K').replace('500k-2m', '$500K-$2M').replace('2m-10m', '$2M-$10M').replace('10m+', '$10M+').replace('flexible', 'Flexible')}</div>
+                      <div>• System Size: {wizardData.powerNeeds} ({wizardData.powerNeeds === 'small' ? '< 2MW' : wizardData.powerNeeds === 'medium' ? '2-10MW' : '> 10MW'})</div>
+                      <div>• Location: {wizardData.location}</div>
+                      {wizardData.hasExistingPower && <div>• Existing Power: {wizardData.existingPowerType}</div>}
+                    </div>
+                  </div>
+
+                  <div className="flex justify-between space-x-3">
+                    <button
+                      className="px-6 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors"
+                      onClick={() => setWizardStep(2)}
+                    >
+                      ← Back
+                    </button>
+                    <button
+                      className="px-8 py-3 bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-lg hover:from-purple-600 hover:to-purple-700 transition-all font-medium shadow-lg transform hover:scale-105"
+                      onClick={generateSmartConfiguration}
+                    >
+                      🪄 Generate My BESS Configuration
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Load Project Modal */}
       {showLoadProject && (
