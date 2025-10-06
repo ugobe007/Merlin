@@ -76,7 +76,7 @@ app.use((req, res, next) => {
 });
 
 // Pre-load templates into memory
-const WORD_TEMPLATE_PATH = path.join(__dirname, 'templates', 'BESS_Quote_Template_Fixed.docx');
+const WORD_TEMPLATE_PATH = path.join(__dirname, 'templates', 'BESS_Quote_Template_Enhanced.docx');
 let wordTemplateBuffer = null;
 
 function loadWordTemplate() {
@@ -272,12 +272,20 @@ app.post('/api/export/word', async (req, res) => {
       ROI_YEARS: outputs.roiYears ? Number(outputs.roiYears).toFixed(2) : '—',
       BUDGET_DELTA: (inputs.budgetKnown && typeof outputs.budgetDelta === 'number') ? money(outputs.budgetDelta) : '—',
       
-      // Additional fields for new template
+      // Additional fields for enhanced template
       CLIENT_NAME: String(inputs.clientName || 'Client Name'),
       QUOTE_DATE: new Date().toLocaleDateString(),
       SYSTEM_COST: money(outputs.bessCapex || 0),
       INSTALLATION_COST: money(outputs.epc || 0),
-      TOTAL_COST: money(outputs.grandCapex || 0)
+      TOTAL_COST: money(outputs.grandCapex || 0),
+      
+      // Enhanced template specific fields
+      LOCATION_REGION: String(inputs.locationRegion || 'United States'),
+      SOLAR_MWP: String(inputs.solarMWp || '0'),
+      GENERATOR_MW: String(inputs.generatorMW || '0'),
+      CERTIFICATIONS: String(inputs.certifications || 'UL9540A, IEEE 1547'),
+      WARRANTY_YEARS: String(inputs.warrantyYears || '10'),
+      UTILIZATION: String(Math.round((inputs.utilization || 0.2) * 100))
     };
     console.timeEnd('export:word:preprocess');
     console.log('[export:word] Template data prepared, field count:', Object.keys(templateData).length);
