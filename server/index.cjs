@@ -398,91 +398,270 @@ app.post('/api/export/excel', async (req, res) => {
     console.log('- Outputs:', JSON.stringify(outputs, null, 2));
     
     const wb = new ExcelJS.Workbook()
-    const ws = wb.addWorksheet('BESS Quote')
+    const ws = wb.addWorksheet('BESS Quote Analysis')
 
-    // Pre-configure columns for better performance
+    // Define color scheme
+    const colors = {
+      headerBlue: 'E3F2FD', // Light blue for headers
+      totalYellow: 'FFF3CD', // Yellow for totals
+      sectionGray: 'F5F5F5', // Light gray for section headers
+      darkBlue: '1976D2', // Dark blue for text
+      darkGreen: '388E3C', // Dark green for financial highlights
+      white: 'FFFFFF'
+    };
+
+    // Configure worksheet
+    ws.pageSetup = {
+      paperSize: 9, // A4
+      orientation: 'portrait',
+      fitToPage: true,
+      fitToHeight: 1,
+      fitToWidth: 1
+    };
+
+    // Set column widths
     ws.columns = [
-      { header: 'Field', key: 'k', width: 34 },
-      { header: 'Value', key: 'v', width: 28 },
-    ]
+      { width: 35 }, // Column A - Field names
+      { width: 20 }, // Column B - Values
+      { width: 5 },  // Column C - Spacer
+      { width: 30 }, // Column D - Financial summary labels
+      { width: 20 }  // Column E - Financial summary values
+    ];
+
+    // Add title
+    ws.mergeCells('A1:E1');
+    const titleCell = ws.getCell('A1');
+    titleCell.value = 'BATTERY ENERGY STORAGE SYSTEM - FINANCIAL ANALYSIS';
+    titleCell.font = { size: 16, bold: true, color: { argb: colors.darkBlue } };
+    titleCell.alignment = { horizontal: 'center', vertical: 'middle' };
+    titleCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: colors.headerBlue } };
+
+    // Add project info
+    ws.mergeCells('A2:E2');
+    const projectCell = ws.getCell('A2');
+    projectCell.value = `Project: ${inputs.projectName || 'BESS Installation'} | Date: ${new Date().toLocaleDateString()}`;
+    projectCell.font = { size: 12, bold: true };
+    projectCell.alignment = { horizontal: 'center' };
+
+    // Financial Summary Section (Top Right)
+    let currentRow = 4;
+    
+    // Financial Summary Header
+    ws.mergeCells(`D${currentRow}:E${currentRow}`);
+    const summaryHeaderCell = ws.getCell(`D${currentRow}`);
+    summaryHeaderCell.value = 'EXECUTIVE FINANCIAL SUMMARY';
+    summaryHeaderCell.font = { size: 14, bold: true, color: { argb: colors.white } };
+    summaryHeaderCell.alignment = { horizontal: 'center', vertical: 'middle' };
+    summaryHeaderCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: colors.darkBlue } };
+    summaryHeaderCell.border = {
+      top: { style: 'thick' }, bottom: { style: 'thick' },
+      left: { style: 'thick' }, right: { style: 'thick' }
+    };
+    currentRow++;
+
+    // Financial metrics with professional styling
+    const financialMetrics = [
+      ['Total Investment', money(outputs.grandCapex), colors.darkGreen],
+      ['Annual Savings', money(outputs.annualSavings), colors.darkGreen],
+      ['Payback Period', `${outputs.roiYears ? Number(outputs.roiYears).toFixed(1) : '—'} years`, colors.darkBlue],
+      ['System Capacity', `${outputs.totalMWh || 0} MWh`, colors.darkBlue],
+      ['Power Rating', `${Math.round(outputs.pcsKW || 0).toLocaleString()} kW`, colors.darkBlue],
+      ['Budget Variance', (inputs.budgetKnown && typeof outputs.budgetDelta === 'number') ? money(outputs.budgetDelta) : 'N/A', colors.darkBlue]
+    ];
+
+    financialMetrics.forEach(([label, value, textColor], index) => {
+      const isTotal = index < 2; // First two are financial totals
+      
+      // Label cell
+      const labelCell = ws.getCell(`D${currentRow}`);
+      labelCell.value = label;
+      labelCell.font = { bold: true, color: { argb: textColor } };
+      labelCell.alignment = { horizontal: 'left', vertical: 'middle' };
+      labelCell.fill = { 
+        type: 'pattern', 
+        pattern: 'solid', 
+        fgColor: { argb: isTotal ? colors.totalYellow : colors.headerBlue } 
+      };
+      labelCell.border = {
+        top: { style: 'thin' }, bottom: { style: 'thin' },
+        left: { style: 'thick' }, right: { style: 'thin' }
+      };
+
+      // Value cell
+      const valueCell = ws.getCell(`E${currentRow}`);
+      valueCell.value = value;
+      valueCell.font = { bold: isTotal, size: isTotal ? 12 : 11, color: { argb: textColor } };
+      valueCell.alignment = { horizontal: 'right', vertical: 'middle' };
+      valueCell.fill = { 
+        type: 'pattern', 
+        pattern: 'solid', 
+        fgColor: { argb: isTotal ? colors.totalYellow : colors.headerBlue } 
+      };
+      valueCell.border = {
+        top: { style: 'thin' }, bottom: { style: 'thin' },
+        left: { style: 'thin' }, right: { style: 'thick' }
+      };
+
+      currentRow++;
+    });
+
+    // Detailed Analysis Section (Left Side)
+    currentRow = 4;
+
+    // Column headers for detailed analysis
+    const headerCell1 = ws.getCell(`A${currentRow}`);
+    headerCell1.value = 'COMPONENT / PARAMETER';
+    headerCell1.font = { bold: true, color: { argb: colors.white } };
+    headerCell1.alignment = { horizontal: 'center', vertical: 'middle' };
+    headerCell1.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: colors.darkBlue } };
+    headerCell1.border = {
+      top: { style: 'thick' }, bottom: { style: 'thick' },
+      left: { style: 'thick' }, right: { style: 'thin' }
+    };
+
+    const headerCell2 = ws.getCell(`B${currentRow}`);
+    headerCell2.value = 'VALUE';
+    headerCell2.font = { bold: true, color: { argb: colors.white } };
+    headerCell2.alignment = { horizontal: 'center', vertical: 'middle' };
+    headerCell2.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: colors.darkBlue } };
+    headerCell2.border = {
+      top: { style: 'thick' }, bottom: { style: 'thick' },
+      left: { style: 'thin' }, right: { style: 'thick' }
+    };
+    
+    currentRow++;
 
     const tariffPct = (assumptions.tariffByRegion?.[inputs.locationRegion] ?? 0)
     const warrantyUplift = inputs.warrantyYears === 20 ? 0.10 : 0
 
-    // Pre-build all rows for batch insertion
-    const rows = [
-      ['--- Inputs ---', ''],
-      ['Power (MW)', inputs.powerMW],
-      ['Standby Hours', inputs.standbyHours],
-      ['Voltage', inputs.voltage],
-      ['Grid Mode', inputs.gridMode],
-      ['Use Case', inputs.useCase],
-      ['Certifications', inputs.certifications],
-      ['Generator (MW)', inputs.generatorMW],
-      ['Solar (MWp)', inputs.solarMWp],
-      ['Wind (MW)', inputs.windMW],
-      ['Utilization (0–1)', inputs.utilization],
-      ['Value $/kWh', inputs.valuePerKWh],
-      ['Warranty (years)', inputs.warrantyYears],
-      ['Warranty Uplift', pct(warrantyUplift)],
-      ['Location (Region)', inputs.locationRegion],
-      ['PCS Separate?', yesno(inputs.pcsSeparate)],
-      ['Budget Known?', yesno(inputs.budgetKnown)],
-      ['Budget (USD)', inputs.budgetKnown ? money(inputs.budgetAmount || 0) : '—'],
-
-      ['', ''],
-      ['--- Assumptions ---', ''],
-      ['Battery $/kWh', money(assumptions.batteryCostPerKWh)],
-      ['PCS $/kW', money(assumptions.pcsCostPerKW)],
-      ['BOS %', pct(assumptions.bosPct)],
-      ['EPC %', pct(assumptions.epcPct)],
-      ['Off-grid PCS factor', assumptions.offgridFactor],
-      ['On-grid PCS factor', assumptions.ongridFactor],
-      ['Gen $/kW', money(assumptions.genCostPerKW)],
-      ['Solar $/kWp', money(assumptions.solarCostPerKWp)],
-      ['Wind $/kW', money(assumptions.windCostPerKW)],
-      ['Tariff % (region)', pct(tariffPct)],
-
-      ['', ''],
-      ['--- Calculations ---', ''],
-      ['Total MWh', outputs.totalMWh],
-      ['PCS kW', Math.round(outputs.pcsKW || 0)],
-      ['Battery Subtotal', money(outputs.batterySubtotal)],
-      ['PCS Subtotal' + (inputs.pcsSeparate ? ' (+15%)' : ''), money(outputs.pcsSubtotal)],
-      ['BOS', money(outputs.bos)],
-      ['EPC', money(outputs.epc)],
-      ['BESS CapEx', money(outputs.bessCapex)],
-      ['Generator Subtotal', money(outputs.genSubtotal)],
-      ['Solar Subtotal', money(outputs.solarSubtotal)],
-      ['Wind Subtotal', money(outputs.windSubtotal)],
-      ['Tariffs (BESS+Solar+Wind)', money(outputs.tariffs)],
-      ['Grand CapEx (pre-warranty)', money(outputs.grandCapexBeforeWarranty)],
-      ['Grand CapEx (incl. warranty)', money(outputs.grandCapex)],
-      ['Annual Savings', money(outputs.annualSavings)],
-      ['ROI (years)', outputs.roiYears ? Number(outputs.roiYears).toFixed(2) : '—'],
-      ['Budget Delta', (inputs.budgetKnown && typeof outputs.budgetDelta === 'number') ? money(outputs.budgetDelta) : '—'],
-    ]
-
-    // Batch insert all rows at once
-    ws.addRows(rows.map(([k, v]) => ({ k, v })))
-
-    // Style section headers efficiently
-    let rowIndex = 1;
-    rows.forEach(([k]) => {
-      rowIndex++;
-      if (typeof k === 'string' && k.startsWith('---')) {
-        ws.getRow(rowIndex).font = { bold: true };
+    // Detailed data with sections
+    const sections = [
+      {
+        title: 'PROJECT SPECIFICATIONS',
+        color: colors.sectionGray,
+        data: [
+          ['Power Rating (MW)', inputs.powerMW],
+          ['Standby Hours', inputs.standbyHours],
+          ['System Voltage', inputs.voltage],
+          ['Grid Configuration', inputs.gridMode],
+          ['Primary Use Case', inputs.useCase],
+          ['Required Certifications', inputs.certifications],
+          ['Location/Region', inputs.locationRegion],
+        ]
+      },
+      {
+        title: 'ADDITIONAL SYSTEMS',
+        color: colors.sectionGray,
+        data: [
+          ['Generator Backup (MW)', inputs.generatorMW || 0],
+          ['Solar Array (MWp)', inputs.solarMWp || 0],
+          ['Wind Generation (MW)', inputs.windMW || 0],
+          ['PCS Separate Installation', yesno(inputs.pcsSeparate)],
+        ]
+      },
+      {
+        title: 'COST BREAKDOWN',
+        color: colors.headerBlue,
+        data: [
+          ['Battery System', money(outputs.batterySubtotal)],
+          ['Power Conversion (PCS)', money(outputs.pcsSubtotal)],
+          ['Balance of System (BOS)', money(outputs.bos)],
+          ['Engineering & Installation', money(outputs.epc)],
+          ['Generator Components', money(outputs.genSubtotal)],
+          ['Solar Components', money(outputs.solarSubtotal)],
+          ['Wind Components', money(outputs.windSubtotal)],
+          ['Taxes & Tariffs', money(outputs.tariffs)],
+        ]
+      },
+      {
+        title: 'FINANCIAL TOTALS',
+        color: colors.totalYellow,
+        data: [
+          ['BESS System Subtotal', money(outputs.bessCapex)],
+          ['Pre-Warranty Total', money(outputs.grandCapexBeforeWarranty)],
+          ['GRAND TOTAL (incl. warranty)', money(outputs.grandCapex)],
+        ]
+      },
+      {
+        title: 'PERFORMANCE METRICS',
+        color: colors.headerBlue,
+        data: [
+          ['Total Energy Capacity (MWh)', outputs.totalMWh],
+          ['Peak Power Output (kW)', Math.round(outputs.pcsKW || 0).toLocaleString()],
+          ['System Utilization', pct(inputs.utilization)],
+          ['Energy Value ($/kWh)', money(inputs.valuePerKWh)],
+          ['Warranty Period (years)', inputs.warrantyYears],
+          ['Annual Energy Savings', money(outputs.annualSavings)],
+          ['Return on Investment', `${outputs.roiYears ? Number(outputs.roiYears).toFixed(2) : '—'} years`],
+        ]
       }
+    ];
+
+    // Add each section with styling
+    sections.forEach(section => {
+      // Section header
+      ws.mergeCells(`A${currentRow}:B${currentRow}`);
+      const sectionHeaderCell = ws.getCell(`A${currentRow}`);
+      sectionHeaderCell.value = section.title;
+      sectionHeaderCell.font = { bold: true, size: 12, color: { argb: colors.darkBlue } };
+      sectionHeaderCell.alignment = { horizontal: 'center', vertical: 'middle' };
+      sectionHeaderCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: section.color } };
+      sectionHeaderCell.border = {
+        top: { style: 'thick' }, bottom: { style: 'thick' },
+        left: { style: 'thick' }, right: { style: 'thick' }
+      };
+      currentRow++;
+
+      // Section data
+      section.data.forEach(([field, value]) => {
+        const isTotal = section.title === 'FINANCIAL TOTALS';
+        
+        // Field name
+        const fieldCell = ws.getCell(`A${currentRow}`);
+        fieldCell.value = field;
+        fieldCell.font = { bold: isTotal };
+        fieldCell.alignment = { horizontal: 'left', vertical: 'middle' };
+        fieldCell.border = {
+          top: { style: 'thin' }, bottom: { style: 'thin' },
+          left: { style: 'thick' }, right: { style: 'thin' }
+        };
+
+        // Value
+        const valueCell = ws.getCell(`B${currentRow}`);
+        valueCell.value = value;
+        valueCell.font = { bold: isTotal };
+        valueCell.alignment = { horizontal: 'right', vertical: 'middle' };
+        if (isTotal) {
+          valueCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: colors.totalYellow } };
+        }
+        valueCell.border = {
+          top: { style: 'thin' }, bottom: { style: 'thin' },
+          left: { style: 'thin' }, right: { style: 'thick' }
+        };
+        
+        currentRow++;
+      });
+
+      // Add spacing between sections
+      currentRow++;
     });
+
+    // Add footer
+    currentRow += 2;
+    ws.mergeCells(`A${currentRow}:E${currentRow}`);
+    const footerCell = ws.getCell(`A${currentRow}`);
+    footerCell.value = `Generated on ${new Date().toLocaleDateString()} | Merlin BESS Quote Builder | Confidential`;
+    footerCell.font = { size: 10, italic: true, color: { argb: '666666' } };
+    footerCell.alignment = { horizontal: 'center' };
 
     const buf = await wb.xlsx.writeBuffer()
     
     const processingTime = Date.now() - startTime;
-    console.log(`[server] Excel export completed in ${processingTime}ms`);
+    console.log(`[server] Enhanced Excel export completed in ${processingTime}ms`);
 
     // Optimized headers
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-    res.setHeader('Content-Disposition', 'attachment; filename=BESS_Quote.xlsx')
+    res.setHeader('Content-Disposition', 'attachment; filename=BESS_Quote_Analysis.xlsx')
     res.setHeader('Content-Length', buf.byteLength);
     res.setHeader('Cache-Control', 'no-cache');
     
