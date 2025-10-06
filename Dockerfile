@@ -16,6 +16,9 @@ RUN npm ci
 # Copy application files
 COPY . .
 
+# Explicitly ensure templates directory exists and is copied
+RUN ls -la server/templates/ || echo "Templates directory not found"
+
 # Build the React application
 RUN npm run build
 

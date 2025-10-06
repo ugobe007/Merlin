@@ -55,6 +55,18 @@ let wordTemplateBuffer = null;
 
 function loadWordTemplate() {
   if (!wordTemplateBuffer) {
+    if (!fs.existsSync(WORD_TEMPLATE_PATH)) {
+      console.error(`[server] CRITICAL: Template file not found at ${WORD_TEMPLATE_PATH}`);
+      console.error(`[server] Working directory: ${process.cwd()}`);
+      console.error(`[server] Server directory: ${__dirname}`);
+      console.error(`[server] Available files in server directory:`, fs.readdirSync(__dirname));
+      if (fs.existsSync(path.join(__dirname, 'templates'))) {
+        console.error(`[server] Files in templates directory:`, fs.readdirSync(path.join(__dirname, 'templates')));
+      } else {
+        console.error(`[server] Templates directory does not exist!`);
+      }
+      throw new Error(`Template file not found at ${WORD_TEMPLATE_PATH}`);
+    }
     wordTemplateBuffer = fs.readFileSync(WORD_TEMPLATE_PATH);
     console.log('[server] Loaded Word template into memory');
   }

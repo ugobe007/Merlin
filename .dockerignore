@@ -8,3 +8,6 @@ README.md
 coverage
 .DS_Store
 dist
+
+# Ensure templates are NOT ignored
+!server/templates/
