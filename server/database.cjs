@@ -26,6 +26,53 @@ class QuoteDatabase {
   }
 
   initializeTables() {
+    // Users table
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS users (
+        id TEXT PRIMARY KEY,
+        email TEXT NOT NULL UNIQUE,
+        password_hash TEXT NOT NULL,
+        first_name TEXT,
+        last_name TEXT,
+        company TEXT,
+        phone TEXT,
+        role TEXT DEFAULT 'user',
+        is_active BOOLEAN DEFAULT 1,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    // User quotes table
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS user_quotes (
+        id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL,
+        project_name TEXT NOT NULL,
+        inputs TEXT NOT NULL,
+        assumptions TEXT NOT NULL,
+        outputs TEXT NOT NULL,
+        is_favorite BOOLEAN DEFAULT 0,
+        tags TEXT,
+        notes TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+      )
+    `);
+
+    // User sessions table (for JWT token blacklisting)
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS user_sessions (
+        id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL,
+        token_hash TEXT NOT NULL,
+        expires_at DATETIME NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+      )
+    `);
+
     // Vendors table
     this.db.exec(`
       CREATE TABLE IF NOT EXISTS vendors (
@@ -493,6 +540,162 @@ class QuoteDatabase {
       if (m.supplier_info) m.supplier_info = JSON.parse(m.supplier_info);
       return m;
     });
+  }
+
+  // User Management Methods
+  createUser(userData) {
+    const id = generateUUID();
+    const now = new Date().toISOString();
+    
+    const stmt = this.db.prepare(`
+      INSERT INTO users (id, email, password_hash, first_name, last_name, company, phone, role, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+    
+    stmt.run(
+      id,
+      userData.email,
+      userData.password_hash,
+      userData.first_name || null,
+      userData.last_name || null,
+      userData.company || null,
+      userData.phone || null,
+      userData.role || 'user',
+      now,
+      now
+    );
+    
+    return this.getUserById(id);
+  }
+
+  getUserById(id) {
+    const stmt = this.db.prepare('SELECT * FROM users WHERE id = ? AND is_active = 1');
+    const user = stmt.get(id);
+    if (user) {
+      delete user.password_hash; // Never return password hash
+    }
+    return user;
+  }
+
+  getUserByEmail(email) {
+    const stmt = this.db.prepare('SELECT * FROM users WHERE email = ? AND is_active = 1');
+    return stmt.get(email);
+  }
+
+  updateUser(id, userData) {
+    const now = new Date().toISOString();
+    const fields = [];
+    const values = [];
+    
+    ['first_name', 'last_name', 'company', 'phone'].forEach(field => {
+      if (userData[field] !== undefined) {
+        fields.push(`${field} = ?`);
+        values.push(userData[field]);
+      }
+    });
+    
+    if (fields.length === 0) return false;
+    
+    fields.push('updated_at = ?');
+    values.push(now, id);
+    
+    const stmt = this.db.prepare(`UPDATE users SET ${fields.join(', ')} WHERE id = ?`);
+    const result = stmt.run(...values);
+    return result.changes > 0;
+  }
+
+  // User Quote Management
+  saveUserQuote(userId, quoteData) {
+    const id = generateUUID();
+    const now = new Date().toISOString();
+    
+    const stmt = this.db.prepare(`
+      INSERT INTO user_quotes (id, user_id, project_name, inputs, assumptions, outputs, tags, notes, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+    
+    stmt.run(
+      id,
+      userId,
+      quoteData.project_name,
+      JSON.stringify(quoteData.inputs),
+      JSON.stringify(quoteData.assumptions),
+      JSON.stringify(quoteData.outputs),
+      quoteData.tags || null,
+      quoteData.notes || null,
+      now,
+      now
+    );
+    
+    return this.getUserQuoteById(id);
+  }
+
+  getUserQuotes(userId, limit = 50, offset = 0) {
+    const stmt = this.db.prepare(`
+      SELECT * FROM user_quotes 
+      WHERE user_id = ? 
+      ORDER BY created_at DESC 
+      LIMIT ? OFFSET ?
+    `);
+    
+    const quotes = stmt.all(userId, limit, offset);
+    return quotes.map(quote => {
+      quote.inputs = JSON.parse(quote.inputs);
+      quote.assumptions = JSON.parse(quote.assumptions);
+      quote.outputs = JSON.parse(quote.outputs);
+      return quote;
+    });
+  }
+
+  getUserQuoteById(id) {
+    const stmt = this.db.prepare('SELECT * FROM user_quotes WHERE id = ?');
+    const quote = stmt.get(id);
+    if (quote) {
+      quote.inputs = JSON.parse(quote.inputs);
+      quote.assumptions = JSON.parse(quote.assumptions);
+      quote.outputs = JSON.parse(quote.outputs);
+    }
+    return quote;
+  }
+
+  updateUserQuote(id, userId, quoteData) {
+    const now = new Date().toISOString();
+    const stmt = this.db.prepare(`
+      UPDATE user_quotes 
+      SET project_name = ?, inputs = ?, assumptions = ?, outputs = ?, tags = ?, notes = ?, updated_at = ?
+      WHERE id = ? AND user_id = ?
+    `);
+    
+    const result = stmt.run(
+      quoteData.project_name,
+      JSON.stringify(quoteData.inputs),
+      JSON.stringify(quoteData.assumptions),
+      JSON.stringify(quoteData.outputs),
+      quoteData.tags || null,
+      quoteData.notes || null,
+      now,
+      id,
+      userId
+    );
+    
+    return result.changes > 0;
+  }
+
+  deleteUserQuote(id, userId) {
+    const stmt = this.db.prepare('DELETE FROM user_quotes WHERE id = ? AND user_id = ?');
+    const result = stmt.run(id, userId);
+    return result.changes > 0;
+  }
+
+  toggleQuoteFavorite(id, userId) {
+    const stmt = this.db.prepare(`
+      UPDATE user_quotes 
+      SET is_favorite = NOT is_favorite, updated_at = ?
+      WHERE id = ? AND user_id = ?
+    `);
+    
+    const result = stmt.run(new Date().toISOString(), id, userId);
+    return result.changes > 0;
   }
 
   close() {

@@ -8,6 +8,7 @@ const PizZip = require('pizzip')
 const Docxtemplater = require('docxtemplater')
 const ExcelJS = require('exceljs')
 const databaseRoutes = require('./routes/database.cjs')
+const { router: authRoutes } = require('./routes/auth.cjs')
 
 const app = express()
 
@@ -39,6 +40,31 @@ app.use(cors({
 
 app.use(bodyParser.json({ limit: '5mb' }))
 
+// Serve React app static files
+const staticPath = path.resolve(process.cwd(), 'dist');
+console.log(`[server] Static files path: ${staticPath}`);
+console.log(`[server] Static files exist: ${fs.existsSync(staticPath)}`);
+
+// Always serve static files when dist exists
+if (fs.existsSync(staticPath)) {
+  // Serve static files from dist
+  app.use(express.static(staticPath));
+  console.log(`[server] Serving static files from: ${staticPath}`);
+}
+
+// Initialize database
+const QuoteDatabase = require('./database.cjs')
+const db = new QuoteDatabase()
+
+// Add database instance to request object
+app.use((req, res, next) => {
+  req.db = db
+  next()
+})
+
+// Authentication API routes
+app.use('/api/auth', authRoutes)
+
 // Database API routes  
 app.use('/api/db', databaseRoutes)
 
@@ -67,14 +93,24 @@ function loadWordTemplate() {
       }
       throw new Error(`Template file not found at ${WORD_TEMPLATE_PATH}`);
     }
-    wordTemplateBuffer = fs.readFileSync(WORD_TEMPLATE_PATH);
-    console.log('[server] Loaded Word template into memory');
+    try {
+      wordTemplateBuffer = fs.readFileSync(WORD_TEMPLATE_PATH);
+      console.log('[server] Loaded Word template into memory');
+    } catch (error) {
+      console.error('[server] Failed to read template file:', error.message);
+      throw error;
+    }
   }
   return wordTemplateBuffer;
 }
 
 // Pre-load on startup
-loadWordTemplate();
+try {
+  loadWordTemplate();
+} catch (error) {
+  console.error('[server] Warning: Could not pre-load template on startup:', error.message);
+  console.error('[server] Template will be loaded on first use');
+}
 
 const money = (n) => `$${Math.round(Number(n || 0)).toLocaleString()}`
 const pct = (n) => `${Math.round(Number(n || 0) * 100)}%`
@@ -83,12 +119,19 @@ const yesno = (b) => (b ? 'Yes' : 'No')
 // Health check endpoint
 app.get('/api/health', (req, res) => {
   const origin = req.get('Origin') || req.get('Referer') || 'direct';
+  const memUsage = process.memoryUsage();
   res.json({ 
     status: 'ok', 
     timestamp: new Date().toISOString(),
     templatesLoaded: !!wordTemplateBuffer,
     requestOrigin: origin,
     serverPort: process.env.PORT || 5000,
+    memory: {
+      rss: `${Math.round(memUsage.rss / 1024 / 1024)}MB`,
+      heapTotal: `${Math.round(memUsage.heapTotal / 1024 / 1024)}MB`,
+      heapUsed: `${Math.round(memUsage.heapUsed / 1024 / 1024)}MB`,
+      external: `${Math.round(memUsage.external / 1024 / 1024)}MB`
+    },
     supportedOrigins: [
       'http://localhost:5173',
       'http://localhost:5174',
@@ -147,15 +190,31 @@ app.get('/api/debug/templates', (req, res) => {
   res.json(templateInfo);
 });
 
+// Simple test endpoint to verify connectivity
+app.post('/api/test', (req, res) => {
+  console.log('[test] Test endpoint called');
+  console.log('[test] Request body:', req.body);
+  res.json({ 
+    success: true, 
+    message: 'Backend is working!', 
+    receivedData: req.body,
+    timestamp: new Date().toISOString()
+  });
+});
+
 app.post('/api/export/word', async (req, res) => {
   console.time('export:word:total');
-  console.log('[export:word] Starting Word export request');
   try {
+    console.log('[export:word] Raw request body:', JSON.stringify(req.body, null, 2));
+    console.log('[export:word] Request body type:', typeof req.body);
+    console.log('[export:word] Request body keys:', Object.keys(req.body || {}));
+    
     const { inputs = {}, assumptions = {}, outputs = {} } = req.body;
-    console.log('[export:word] Request body received:');
-    console.log('[export:word] - inputs:', JSON.stringify(inputs, null, 2));
-    console.log('[export:word] - assumptions keys:', Object.keys(assumptions));
-    console.log('[export:word] - outputs keys:', Object.keys(outputs));
+    
+    console.log('[export:word] Received data:');
+    console.log('- Inputs:', JSON.stringify(inputs, null, 2));
+    console.log('- Assumptions:', JSON.stringify(assumptions, null, 2));
+    console.log('- Outputs:', JSON.stringify(outputs, null, 2));
 
     console.time('export:word:preprocess');
     // Pre-compute all data once (recommended optimization)
@@ -217,13 +276,20 @@ app.post('/api/export/word', async (req, res) => {
     console.log('[export:word] Template data prepared, field count:', Object.keys(templateData).length);
 
     console.time('export:word:template');
-    // Check if template exists
-    if (!fs.existsSync(WORD_TEMPLATE_PATH)) {
-      throw new Error(`Template file not found at ${WORD_TEMPLATE_PATH}`);
+    // Check if template exists and load it
+    let templateBuffer;
+    try {
+      if (!fs.existsSync(WORD_TEMPLATE_PATH)) {
+        throw new Error(`Template file not found at ${WORD_TEMPLATE_PATH}`);
+      }
+      templateBuffer = loadWordTemplate();
+    } catch (error) {
+      console.error('[export:word] Template loading failed:', error.message);
+      return res.status(500).json({ 
+        error: 'Template loading failed', 
+        details: error.message 
+      });
     }
-    
-    // Use fresh template instance for thread safety
-    const templateBuffer = loadWordTemplate();
     console.log('[export:word] Template buffer loaded, size:', templateBuffer.length, 'bytes');
     
     const zip = new PizZip(templateBuffer);
@@ -286,6 +352,11 @@ app.post('/api/export/excel', async (req, res) => {
   try {
     const startTime = Date.now();
     const { inputs = {}, assumptions = {}, outputs = {} } = req.body
+    
+    console.log('[export:excel] Received data:');
+    console.log('- Inputs:', JSON.stringify(inputs, null, 2));
+    console.log('- Assumptions:', JSON.stringify(assumptions, null, 2));
+    console.log('- Outputs:', JSON.stringify(outputs, null, 2));
     
     const wb = new ExcelJS.Workbook()
     const ws = wb.addWorksheet('BESS Quote')
@@ -383,12 +454,8 @@ app.post('/api/export/excel', async (req, res) => {
   }
 })
 
-// Serve React app static files and handle client-side routing in production
-if (process.env.NODE_ENV === 'production') {
-  // Serve static files from dist
-  app.use(express.static(path.resolve(process.cwd(), 'dist')));
-  
-  // Handle client-side routing - serve index.html for all non-API routes
+// Handle client-side routing - serve index.html for all non-API routes
+if (fs.existsSync(path.resolve(process.cwd(), 'dist'))) {
   app.use((req, res, next) => {
     // Skip API routes
     if (req.path.startsWith('/api/')) {
@@ -401,8 +468,30 @@ if (process.env.NODE_ENV === 'production') {
 
 const PORT = process.env.PORT || 5001
 const HOST = process.env.HOST || '0.0.0.0'
+
+console.log(`[server] Starting server...`)
+console.log(`[server] PORT: ${PORT}`)
+console.log(`[server] HOST: ${HOST}`)
+console.log(`[server] NODE_ENV: ${process.env.NODE_ENV || 'development'}`)
+
 app.listen(PORT, HOST, () => {
-  console.log(`[server] Optimized API listening on http://${HOST}:${PORT}`)
+  console.log(`[server] ✅ Optimized API listening on http://${HOST}:${PORT}`)
   console.log(`[server] Environment: ${process.env.NODE_ENV || 'development'}`)
   console.log(`[server] Serving static files from: ${path.resolve(process.cwd(), 'dist')}`)
+  console.log(`[server] 🚀 Server ready for connections`)
+}).on('error', (err) => {
+  console.error(`[server] ❌ Failed to start server:`, err)
+  process.exit(1)
 })
+
+// Error handlers to prevent server crashes
+process.on('uncaughtException', (error) => {
+  console.error('[server] Uncaught Exception:', error.message);
+  console.error('[server] Stack:', error.stack);
+  // Don't exit in development, just log the error
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('[server] Unhandled Rejection at:', promise, 'reason:', reason);
+  // Don't exit in development, just log the error
+});

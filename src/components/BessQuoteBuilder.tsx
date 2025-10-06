@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
 import newMerlin from '../assets/images/new_Merlin.png'
-import { loadAll, saveProject, deleteProject } from '../lib/store'
+import { loadAll, saveProject } from '../lib/store'
 import VendorManager from './VendorManager'
 import DatabaseTest from './DatabaseTest'
+import UserProfile from './UserProfile'
 import { parseVendorQuoteFile } from '../utils/fileParser'
+import { playMagicWandSound } from '../utils/magicSound'
 
 
 type Region = 'US' | 'UK' | 'EU' | 'Other'
@@ -108,11 +110,19 @@ export default function BessQuoteBuilder() {
   const [busy, setBusy] = useState<'' | 'word' | 'excel'>('')
   const [showVendorManager, setShowVendorManager] = useState(false)
   const [showDatabaseTest, setShowDatabaseTest] = useState(false)
+  const [showUserProfile, setShowUserProfile] = useState(false)
+  const [currentPrice, setCurrentPrice] = useState<number | null>(0.12)
+  const [magicalExport, setMagicalExport] = useState(false)
 
   // persist inputs automatically
   useEffect(() => {
     localStorage.setItem('merlin_inputs', JSON.stringify(inputs))
   }, [inputs])
+
+    // Set default price
+  useEffect(() => {
+    setCurrentPrice(0.12) // $0.12/kWh default
+  }, [])
 
   const [out, setOut] = useState<Outputs>(() => calc(inputs, assm))
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -266,16 +276,50 @@ export default function BessQuoteBuilder() {
   const exportToWord = async () => {
     try {
       setBusy('word')
+      
+      // Ensure calculations are up to date
+      const currentOut = calc(inputs, assm);
+      setOut(currentOut);
+      
+      // Ensure all values are properly formatted
+      const safeOutputs = {
+        ...currentOut,
+        totalMWh: Number(currentOut.totalMWh) || 0,
+        pcsKW: Number(currentOut.pcsKW) || 0,
+        batterySubtotal: Number(currentOut.batterySubtotal) || 0,
+        pcsSubtotal: Number(currentOut.pcsSubtotal) || 0,
+        bos: Number(currentOut.bos) || 0,
+        epc: Number(currentOut.epc) || 0,
+        bessCapex: Number(currentOut.bessCapex) || 0,
+        genSubtotal: Number(currentOut.genSubtotal) || 0,
+        solarSubtotal: Number(currentOut.solarSubtotal) || 0,
+        windSubtotal: Number(currentOut.windSubtotal) || 0,
+        tariffs: Number(currentOut.tariffs) || 0,
+        grandCapexBeforeWarranty: Number(currentOut.grandCapexBeforeWarranty) || 0,
+        grandCapex: Number(currentOut.grandCapex) || 0,
+        annualSavings: Number(currentOut.annualSavings) || 0,
+        totalCost: Number(currentOut.grandCapex) || 0
+      };
+      
       const payload = { 
         inputs: { ...inputs, projectName }, 
         assumptions: assm, 
-        outputs: out 
+        outputs: safeOutputs 
       }
+      
+      console.log('Export Word payload:', payload); // Debug log
+      console.log('Outputs calculated:', currentOut); // Debug log
+      console.log('Inputs being sent:', inputs); // Debug log
+      console.log('Assumptions being sent:', assm); // Debug log
       
       // Determine API base URL dynamically
       const apiBase = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
         ? 'http://localhost:5001'
         : '';
+      
+      console.log('API Base URL:', apiBase);
+      console.log('Current hostname:', window.location.hostname);
+      console.log('Full API URL:', `${apiBase}/api/export/word`);
       
       // Add timeout and better error handling
       const controller = new AbortController()
@@ -306,9 +350,22 @@ export default function BessQuoteBuilder() {
       document.body.appendChild(a)
       a.click()
       window.URL.revokeObjectURL(url)
+      
+      // Play magic wand sound on successful export
+      playMagicWandSound()
+      
+      // Show magical export notification
+      setMagicalExport(true)
+      setTimeout(() => setMagicalExport(false), 2000)
+      
     } catch (error) {
       console.error('Export error:', error)
-      alert(error instanceof Error ? error.message : 'Failed to export document. Please try again.')
+      console.error('Error details:', {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
+        type: typeof error
+      });
+      alert(`Export failed: ${error instanceof Error ? error.message : 'Unknown error'}. Check console for details.`)
     } finally {
       setBusy('')
     }
@@ -317,16 +374,49 @@ export default function BessQuoteBuilder() {
   const exportToExcel = async () => {
     try {
       setBusy('excel')
+      
+      // Ensure calculations are up to date
+      const currentOut = calc(inputs, assm);
+      setOut(currentOut);
+      
+      // Ensure all values are properly formatted
+      const safeOutputs = {
+        ...currentOut,
+        totalMWh: Number(currentOut.totalMWh) || 0,
+        pcsKW: Number(currentOut.pcsKW) || 0,
+        batterySubtotal: Number(currentOut.batterySubtotal) || 0,
+        pcsSubtotal: Number(currentOut.pcsSubtotal) || 0,
+        bos: Number(currentOut.bos) || 0,
+        epc: Number(currentOut.epc) || 0,
+        bessCapex: Number(currentOut.bessCapex) || 0,
+        genSubtotal: Number(currentOut.genSubtotal) || 0,
+        solarSubtotal: Number(currentOut.solarSubtotal) || 0,
+        windSubtotal: Number(currentOut.windSubtotal) || 0,
+        tariffs: Number(currentOut.tariffs) || 0,
+        grandCapexBeforeWarranty: Number(currentOut.grandCapexBeforeWarranty) || 0,
+        grandCapex: Number(currentOut.grandCapex) || 0,
+        annualSavings: Number(currentOut.annualSavings) || 0,
+        totalCost: Number(currentOut.grandCapex) || 0
+      };
+      
       const payload = { 
         inputs: { ...inputs, projectName }, 
         assumptions: assm, 
-        outputs: out 
+        outputs: safeOutputs 
       }
+      
+      console.log('Export Excel payload:', payload); // Debug log
+      console.log('Outputs calculated:', currentOut); // Debug log
+      console.log('Inputs being sent:', inputs); // Debug log
+      console.log('Assumptions being sent:', assm); // Debug log
       
       // Determine API base URL dynamically
       const apiBase = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
         ? 'http://localhost:5001'
         : '';
+      
+      console.log('Excel API Base URL:', apiBase);
+      console.log('Excel Full API URL:', `${apiBase}/api/export/excel`);
       
       const controller = new AbortController()
       const timeoutId = setTimeout(() => controller.abort(), 30000)
@@ -357,6 +447,14 @@ export default function BessQuoteBuilder() {
       a.click()
       document.body.removeChild(a)
       URL.revokeObjectURL(url)
+      
+      // Play magic wand sound on successful export
+      playMagicWandSound()
+      
+      // Show magical export notification
+      setMagicalExport(true)
+      setTimeout(() => setMagicalExport(false), 2000)
+      
     } catch (error: any) {
       console.error('Excel export error:', error)
       if (error.name === 'AbortError') {
@@ -371,6 +469,31 @@ export default function BessQuoteBuilder() {
 
   return (
     <div className="p-8 max-w-5xl mx-auto space-y-6">
+      {/* Top Bar with User Profile and Price */}
+      <div className="flex justify-between items-center mb-4">
+        <div className="flex items-center space-x-4">
+          <button 
+            className="px-4 py-2 rounded-lg bg-purple-200 text-purple-700 hover:bg-purple-300 transition-colors font-medium"
+            onClick={() => setShowUserProfile(true)}
+          >
+            👤 User Profile
+          </button>
+        </div>
+        
+        <div className="flex items-center space-x-2">
+          <span className="text-sm text-gray-600">Current kWh Price:</span>
+          <a 
+            href="https://hourlypricing.comed.com/live-prices/" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="font-bold text-lg hover:underline"
+            style={{ color: '#1e3a8a' }}
+          >
+            ${(currentPrice || 0.12).toFixed(4)}/kWh
+          </a>
+        </div>
+      </div>
+
       {/* Header */}
       <header className="flex flex-col items-center mb-4 bg-gradient-to-r from-blue-100 to-white rounded-2xl p-4 shadow-md">
         <img src={newMerlin} alt="Merlin" className="w-28 h-auto drop-shadow-lg mb-3" />
@@ -386,6 +509,48 @@ export default function BessQuoteBuilder() {
             onChange={e => setProjectName(e.target.value)}
           />
           <button className="border rounded px-3 py-2" onClick={handleSaveProject}>Save Project</button>
+          <button 
+            className="border rounded px-3 py-2 bg-blue-50 hover:bg-blue-100" 
+            onClick={async () => {
+              const token = localStorage.getItem('auth_token');
+              if (!token) {
+                alert('Please sign in to save quotes');
+                setShowUserProfile(true);
+                return;
+              }
+
+              try {
+                const API_BASE = process.env.NODE_ENV === 'development' 
+                  ? 'http://localhost:5001'
+                  : '';
+
+                const response = await fetch(`${API_BASE}/api/auth/quotes`, {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                  },
+                  body: JSON.stringify({
+                    project_name: projectName || `Quote ${new Date().toLocaleString()}`,
+                    inputs,
+                    assumptions: assm,
+                    outputs: out
+                  })
+                });
+
+                if (response.ok) {
+                  alert('Quote saved to your profile!');
+                } else {
+                  const error = await response.json();
+                  alert(`Failed to save quote: ${error.error || 'Unknown error'}`);
+                }
+              } catch (error) {
+                alert('Failed to save quote. Please try again.');
+              }
+            }}
+          >
+            Save to Profile
+          </button>
           <select
             className="border p-2 rounded"
             onChange={e => {
@@ -400,16 +565,6 @@ export default function BessQuoteBuilder() {
               </option>
             ))}
           </select>
-          <button
-            className="border rounded px-3 py-2"
-            onClick={() => {
-              if (!projectName) return
-              deleteProject(projectName)
-              setProjects(loadAll())
-            }}
-          >
-            Delete by name
-          </button>
         </div>
       </header>
 
@@ -623,13 +778,47 @@ export default function BessQuoteBuilder() {
         >
           Database Test
         </button>
+        <button 
+          className="px-4 py-2 rounded border bg-green-600 text-white hover:bg-green-700"
+          onClick={async () => {
+            try {
+              const apiBase = window.location.hostname === 'localhost' ? 'http://localhost:5001' : '';
+              console.log('Testing connectivity to:', `${apiBase}/api/test`);
+              const response = await fetch(`${apiBase}/api/test`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ test: 'connectivity check', timestamp: new Date().toISOString() })
+              });
+              const result = await response.json();
+              console.log('Test result:', result);
+              alert(`✅ Backend connection successful!\n${result.message}`);
+            } catch (error) {
+              console.error('Connectivity test failed:', error);
+              const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+              alert(`❌ Backend connection failed: ${errorMessage}`);
+            }
+          }}
+        >
+          🔗 Test Backend
+        </button>
         <button className="px-4 py-2 rounded border disabled:opacity-60" disabled={busy==='word'} onClick={exportToWord}>
-          {busy==='word' ? 'Exporting…' : 'Export Word'}
+          {busy==='word' ? '🪄 Exporting…' : '🪄 Export Word'}
         </button>
         <button className="px-4 py-2 rounded border disabled:opacity-60" disabled={busy==='excel'} onClick={exportToExcel}>
-          {busy==='excel' ? 'Exporting…' : 'Export Excel'}
+          {busy==='excel' ? '🪄 Exporting…' : '🪄 Export Excel'}
         </button>
       </div>
+
+      {/* Magical Export Notification */}
+      {magicalExport && (
+        <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-purple-600 text-white px-8 py-4 rounded-lg shadow-lg z-50 animate-pulse">
+          <div className="text-center">
+            <div className="text-4xl mb-2">✨🪄✨</div>
+            <div className="text-lg font-bold">Magic Export Complete!</div>
+            <div className="text-sm">Your quote has been enchanted and exported</div>
+          </div>
+        </div>
+      )}
 
       <p className="text-xs text-neutral-500">
         Import vendor quotes as JSON or CSV to override assumptions. Values persist in your browser.
@@ -645,6 +834,19 @@ export default function BessQuoteBuilder() {
       <DatabaseTest 
         isOpen={showDatabaseTest}
         onClose={() => setShowDatabaseTest(false)}
+      />
+
+      {/* User Profile Modal */}
+      <UserProfile 
+        isOpen={showUserProfile}
+        onClose={() => setShowUserProfile(false)}
+        onLoadQuote={(quote) => {
+          setProjectName(quote.project_name);
+          setInputs(quote.inputs);
+          setAssm(quote.assumptions);
+          setShowUserProfile(false);
+          alert(`Loaded quote: ${quote.project_name}`);
+        }}
       />
     </div>
   )
