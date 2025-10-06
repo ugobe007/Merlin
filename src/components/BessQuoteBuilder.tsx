@@ -131,9 +131,17 @@ export default function BessQuoteBuilder() {
       powerGeneration: false,
       solar: false,
       wind: false,
+      hybrid: false,
       grid: true
     },
-    gridConnection: 'behind' // 'front' or 'behind'
+    gridConnection: 'behind', // 'front' or 'behind'
+    hybridConfig: {
+      generationMW: 0,
+      storageMWh: 0,
+      generationType: 'solar' // 'solar', 'wind', 'generator', 'mixed'
+    },
+    worldRegion: 'US' as Region, // for tariffs and shipping
+    shippingLocation: ''
   })
 
   // persist inputs automatically
@@ -209,11 +217,11 @@ export default function BessQuoteBuilder() {
 
   // Smart Wizard Logic
   function generateSmartConfiguration() {
-    const { application, budgetRange, powerMW, location, equipmentNeeded, gridConnection } = wizardData
+    const { application, budgetRange, powerMW, equipmentNeeded, gridConnection, worldRegion } = wizardData
     
     // Initialize configuration based on application type and user inputs
     let config: Partial<Inputs> = {
-      locationRegion: location,
+      locationRegion: worldRegion, // Use tariff region instead of project location
       gridMode: gridConnection === 'behind' ? 'on-grid' : 'off-grid',
       powerMW: powerMW // Use the exact power specified by user
     }
@@ -291,6 +299,37 @@ export default function BessQuoteBuilder() {
     
     if (equipmentNeeded.powerGeneration) {
       config.generatorMW = powerMW * 0.8 // Backup generator
+    }
+
+    // Configure hybrid system
+    if (equipmentNeeded.hybrid) {
+      const { generationMW, storageMWh, generationType } = wizardData.hybridConfig
+      
+      // Set battery capacity based on storage requirement
+      if (storageMWh > 0) {
+        config.standbyHours = storageMWh / powerMW // Calculate hours from storage capacity
+      }
+      
+      // Configure generation based on type
+      switch (generationType) {
+        case 'solar':
+          config.solarMWp = generationMW
+          break
+        case 'wind':
+          config.windMW = generationMW
+          break
+        case 'generator':
+          config.generatorMW = generationMW
+          break
+        case 'mixed':
+          // Split generation between sources
+          config.solarMWp = generationMW * 0.6
+          config.windMW = generationMW * 0.4
+          break
+      }
+      
+      // Update use case for hybrid systems
+      config.useCase = `Hybrid ${generationType.charAt(0).toUpperCase() + generationType.slice(1)} + Storage`
     }
 
     // Adjust grid mode if grid equipment not selected
@@ -1087,6 +1126,7 @@ export default function BessQuoteBuilder() {
                         { key: 'powerGeneration', label: 'Power Generation', icon: '⚡', desc: 'Diesel/gas generators' },
                         { key: 'solar', label: 'Solar Panels', icon: '☀️', desc: 'Photovoltaic systems' },
                         { key: 'wind', label: 'Wind Turbines', icon: '�', desc: 'Wind power generation' },
+                        { key: 'hybrid', label: 'Hybrid System', icon: '🔄', desc: 'Combined generation + storage' },
                         { key: 'grid', label: 'Grid Connection', icon: '🔌', desc: 'Utility grid integration' }
                       ].map((equipment) => (
                         <button
@@ -1115,6 +1155,91 @@ export default function BessQuoteBuilder() {
                       ))}
                     </div>
                   </div>
+
+                  {/* Hybrid System Configuration */}
+                  {wizardData.equipmentNeeded.hybrid && (
+                    <div className="bg-orange-50 p-4 rounded-lg border border-orange-200">
+                      <h4 className="font-medium text-orange-800 mb-3">Hybrid System Configuration</h4>
+                      <p className="text-sm text-orange-700 mb-3">Configure your hybrid generation and storage system:</p>
+                      
+                      <div className="grid grid-cols-2 gap-4 mb-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Generation Capacity (MW)
+                          </label>
+                          <input
+                            type="number"
+                            step="0.1"
+                            min="0"
+                            className="w-full p-2 border border-gray-300 rounded-lg"
+                            value={wizardData.hybridConfig.generationMW}
+                            onChange={(e) => setWizardData({
+                              ...wizardData,
+                              hybridConfig: {
+                                ...wizardData.hybridConfig,
+                                generationMW: parseFloat(e.target.value) || 0
+                              }
+                            })}
+                            placeholder="e.g., 3.0"
+                          />
+                        </div>
+                        
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Storage Capacity (MWh)
+                          </label>
+                          <input
+                            type="number"
+                            step="0.1"
+                            min="0"
+                            className="w-full p-2 border border-gray-300 rounded-lg"
+                            value={wizardData.hybridConfig.storageMWh}
+                            onChange={(e) => setWizardData({
+                              ...wizardData,
+                              hybridConfig: {
+                                ...wizardData.hybridConfig,
+                                storageMWh: parseFloat(e.target.value) || 0
+                              }
+                            })}
+                            placeholder="e.g., 6.0"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Primary Generation Type
+                        </label>
+                        <div className="grid grid-cols-2 gap-2">
+                          {[
+                            { value: 'solar', label: 'Solar PV', icon: '☀️' },
+                            { value: 'wind', label: 'Wind', icon: '💨' },
+                            { value: 'generator', label: 'Generator', icon: '⚡' },
+                            { value: 'mixed', label: 'Mixed Sources', icon: '🔄' }
+                          ].map((type) => (
+                            <button
+                              key={type.value}
+                              className={`p-2 rounded-lg border-2 text-left transition-all ${
+                                wizardData.hybridConfig.generationType === type.value
+                                  ? 'border-orange-500 bg-orange-100 text-orange-800'
+                                  : 'border-gray-200 hover:border-gray-300 bg-white'
+                              }`}
+                              onClick={() => setWizardData({
+                                ...wizardData,
+                                hybridConfig: {
+                                  ...wizardData.hybridConfig,
+                                  generationType: type.value
+                                }
+                              })}
+                            >
+                              <span className="text-lg mr-2">{type.icon}</span>
+                              <span className="text-sm font-medium">{type.label}</span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
                   {/* Application Type */}
                   <div>
@@ -1247,6 +1372,46 @@ export default function BessQuoteBuilder() {
                     </select>
                   </div>
 
+                  {/* Tariff and Shipping Configuration */}
+                  <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                    <h4 className="font-medium text-blue-800 mb-3">Tariff & Shipping Calculations</h4>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          World Region (for tariff calculations)
+                        </label>
+                        <select
+                          className="w-full p-3 border border-gray-300 rounded-lg"
+                          value={wizardData.worldRegion}
+                          onChange={(e) => setWizardData({...wizardData, worldRegion: e.target.value as Region})}
+                        >
+                          <option value="US">North America</option>
+                          <option value="UK">United Kingdom</option>
+                          <option value="EU">European Union</option>
+                          <option value="Other">Asia Pacific / Other</option>
+                        </select>
+                      </div>
+                      
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Shipping Destination
+                        </label>
+                        <input
+                          type="text"
+                          className="w-full p-3 border border-gray-300 rounded-lg"
+                          value={wizardData.shippingLocation}
+                          onChange={(e) => setWizardData({...wizardData, shippingLocation: e.target.value})}
+                          placeholder="e.g., California, USA or London, UK"
+                        />
+                      </div>
+                    </div>
+                    
+                    <div className="mt-3 text-sm text-blue-700">
+                      <p>💡 <strong>Tariff Region:</strong> Used for calculating import duties and energy pricing</p>
+                      <p>📦 <strong>Shipping:</strong> Helps estimate logistics and delivery costs</p>
+                    </div>
+                  </div>
+
                   <div className="flex justify-between space-x-3">
                     <button
                       className="px-6 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors"
@@ -1336,14 +1501,20 @@ export default function BessQuoteBuilder() {
                             powerGeneration: 'Power Gen',
                             solar: 'Solar',
                             wind: 'Wind',
+                            hybrid: 'Hybrid',
                             grid: 'Grid'
                           }
                           return labels[key]
                         }).join(', ')}</div>
+                      {wizardData.equipmentNeeded.hybrid && (
+                        <div>• Hybrid Config: {wizardData.hybridConfig.generationMW}MW generation + {wizardData.hybridConfig.storageMWh}MWh storage ({wizardData.hybridConfig.generationType})</div>
+                      )}
                       <div>• Application: {wizardData.application}</div>
                       <div>• Budget Range: {wizardData.budgetRange.replace('under500k', 'Under $500K').replace('500k-2m', '$500K-$2M').replace('2m-10m', '$2M-$10M').replace('10m+', '$10M+').replace('flexible', 'Flexible')}</div>
                       <div>• System Size: {wizardData.powerNeeds} ({wizardData.powerNeeds === 'small' ? '< 2MW' : wizardData.powerNeeds === 'medium' ? '2-10MW' : '> 10MW'})</div>
                       <div>• Location: {wizardData.location}</div>
+                      <div>• Tariff Region: {wizardData.worldRegion}</div>
+                      {wizardData.shippingLocation && <div>• Shipping: {wizardData.shippingLocation}</div>}
                       {wizardData.primaryGoal && <div>• Primary Goal: {wizardData.primaryGoal.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}</div>}
                     </div>
                   </div>
