@@ -103,10 +103,49 @@ app.get('/api/test-cors', (req, res) => {
   });
 });
 
+// Debug endpoint to check template availability
+app.get('/api/debug/templates', (req, res) => {
+  const templatePath = path.join(__dirname, 'templates', 'BESS_Quote_Template.docx');
+  const templateExists = fs.existsSync(templatePath);
+  
+  let templateInfo = {
+    templatePath,
+    templateExists,
+    workingDirectory: process.cwd(),
+    serverDirectory: __dirname,
+  };
+  
+  if (templateExists) {
+    try {
+      const stats = fs.statSync(templatePath);
+      templateInfo.templateSize = stats.size;
+      templateInfo.templateModified = stats.mtime;
+    } catch (e) {
+      templateInfo.templateError = e.message;
+    }
+  }
+  
+  // Check if templates directory exists
+  const templatesDir = path.join(__dirname, 'templates');
+  templateInfo.templatesDirExists = fs.existsSync(templatesDir);
+  
+  if (templateInfo.templatesDirExists) {
+    try {
+      templateInfo.templatesContent = fs.readdirSync(templatesDir);
+    } catch (e) {
+      templateInfo.templatesDirError = e.message;
+    }
+  }
+  
+  res.json(templateInfo);
+});
+
 app.post('/api/export/word', async (req, res) => {
-  console.time('export:word:total'); // Performance timing
+  console.time('export:word:total');
+  console.log('[export:word] Starting Word export request');
   try {
     const { inputs = {}, assumptions = {}, outputs = {} } = req.body;
+    console.log('[export:word] Request body received, inputs keys:', Object.keys(inputs));
 
     console.time('export:word:preprocess');
     // Pre-compute all data once (recommended optimization)
@@ -164,10 +203,18 @@ app.post('/api/export/word', async (req, res) => {
       BUDGET_DELTA: (inputs.budgetKnown && typeof outputs.budgetDelta === 'number') ? money(outputs.budgetDelta) : '—'
     };
     console.timeEnd('export:word:preprocess');
+    console.log('[export:word] Template data prepared, field count:', Object.keys(templateData).length);
 
     console.time('export:word:template');
+    // Check if template exists
+    if (!fs.existsSync(WORD_TEMPLATE_PATH)) {
+      throw new Error(`Template file not found at ${WORD_TEMPLATE_PATH}`);
+    }
+    
     // Use fresh template instance for thread safety
     const templateBuffer = loadWordTemplate();
+    console.log('[export:word] Template buffer loaded, size:', templateBuffer.length, 'bytes');
+    
     const zip = new PizZip(templateBuffer);
     const doc = new Docxtemplater(zip, { 
       paragraphLoop: true, 
@@ -177,11 +224,13 @@ app.post('/api/export/word', async (req, res) => {
       parser: (tag) => ({ get: tag }) // Optimized parser
     });
     console.timeEnd('export:word:template');
+    console.log('[export:word] Docxtemplater initialized successfully');
 
     console.time('export:word:render');
     doc.setData(templateData);
     doc.render();
     console.timeEnd('export:word:render');
+    console.log('[export:word] Document rendered successfully');
     
     console.time('export:word:generate');
     const buffer = doc.getZip().generate({ 
@@ -190,6 +239,7 @@ app.post('/api/export/word', async (req, res) => {
       compressionOptions: { level: 6 } // Balanced compression for speed
     });
     console.timeEnd('export:word:generate');
+    console.log('[export:word] Buffer generated, size:', buffer.length, 'bytes');
 
     console.time('export:word:stream');
     // Optimized response headers
@@ -197,16 +247,27 @@ app.post('/api/export/word', async (req, res) => {
     res.setHeader('Content-Disposition', 'attachment; filename="BESS_Quote.docx"');
     res.setHeader('Content-Length', buffer.length);
     res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Access-Control-Expose-Headers', 'Content-Disposition');
     
     // Stream response
     res.end(buffer);
     console.timeEnd('export:word:stream');
     console.timeEnd('export:word:total');
+    console.log('[export:word] Export completed successfully');
 
   } catch (error) {
-    console.error('Word export error:', error);
+    console.error('[export:word] Export failed:', error.message);
+    console.error('[export:word] Stack trace:', error.stack);
     console.timeEnd('export:word:total');
-    res.status(500).json({ error: 'Export failed', details: error.message });
+    
+    // Return detailed error for debugging
+    res.status(500).json({ 
+      error: 'Export failed', 
+      details: error.message,
+      templatePath: WORD_TEMPLATE_PATH,
+      templateExists: fs.existsSync(WORD_TEMPLATE_PATH),
+      environment: process.env.NODE_ENV || 'development'
+    });
   }
 });
 
