@@ -372,9 +372,17 @@ app.post('/api/export/excel', async (req, res) => {
   }
 })
 
-// Serve React app index.html for the root path in production
+// Serve React app static files and handle client-side routing in production
 if (process.env.NODE_ENV === 'production') {
-  app.get('/', (req, res) => {
+  // Serve static files from dist
+  app.use(express.static(path.resolve(process.cwd(), 'dist')));
+  
+  // Handle client-side routing - serve index.html for all non-API routes
+  app.get('*', (req, res) => {
+    // Don't interfere with API routes
+    if (req.path.startsWith('/api/')) {
+      return res.status(404).json({ error: 'API endpoint not found' });
+    }
     res.sendFile(path.resolve(process.cwd(), 'dist', 'index.html'));
   });
 }
@@ -383,4 +391,5 @@ const PORT = process.env.PORT || 5001
 app.listen(PORT, () => {
   console.log(`[server] Optimized API listening on http://localhost:${PORT}`)
   console.log(`[server] Environment: ${process.env.NODE_ENV || 'development'}`)
+  console.log(`[server] Serving static files from: ${path.resolve(process.cwd(), 'dist')}`)
 })
