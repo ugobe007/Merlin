@@ -4,6 +4,17 @@ const fs = require('fs');
 // Create a comprehensive BESS quote template with tables and image placeholders
 const doc = new docx.Document({
   styles: {
+    default: {
+      document: {
+        run: {
+          font: "Helvetica",
+          size: 22
+        },
+        paragraph: {
+          spacing: { line: 240 }
+        }
+      }
+    },
     paragraphStyles: [
       {
         id: "heading1",
@@ -11,6 +22,7 @@ const doc = new docx.Document({
         basedOn: "Normal",
         next: "Normal",
         run: {
+          font: "Helvetica",
           size: 32,
           bold: true,
           color: "2E3B82"
@@ -25,6 +37,7 @@ const doc = new docx.Document({
         basedOn: "Normal",
         next: "Normal",
         run: {
+          font: "Helvetica",
           size: 24,
           bold: true,
           color: "4F46E5"
@@ -39,6 +52,7 @@ const doc = new docx.Document({
         basedOn: "Normal",
         next: "Normal",
         run: {
+          font: "Helvetica",
           size: 20,
           bold: true,
           color: "6366F1"
@@ -61,30 +75,92 @@ const doc = new docx.Document({
       }
     },
     children: [
-      // Header/Title
-      new docx.Paragraph({
-        children: [
-          new docx.TextRun({
-            text: "BATTERY ENERGY STORAGE SYSTEM",
-            bold: true,
-            size: 36,
-            color: "1E40AF"
+      // Header with Logo - using table for layout
+      new docx.Table({
+        rows: [
+          new docx.TableRow({
+            children: [
+              new docx.TableCell({
+                children: [
+                  new docx.Paragraph({
+                    children: [
+                      new docx.TextRun({
+                        text: "BATTERY ENERGY STORAGE SYSTEM",
+                        font: "Helvetica",
+                        bold: true,
+                        size: 36,
+                        color: "1E40AF"
+                      })
+                    ],
+                    alignment: docx.AlignmentType.LEFT
+                  }),
+                  new docx.Paragraph({
+                    children: [
+                      new docx.TextRun({
+                        text: "COMMERCIAL QUOTE PROPOSAL",
+                        font: "Helvetica",
+                        bold: true,
+                        size: 24,
+                        color: "3B82F6"
+                      })
+                    ],
+                    alignment: docx.AlignmentType.LEFT,
+                    spacing: { after: 200 }
+                  })
+                ],
+                width: { size: 70, type: docx.WidthType.PERCENTAGE },
+                borders: {
+                  top: { style: docx.BorderStyle.NONE },
+                  bottom: { style: docx.BorderStyle.NONE },
+                  left: { style: docx.BorderStyle.NONE },
+                  right: { style: docx.BorderStyle.NONE }
+                }
+              }),
+              new docx.TableCell({
+                children: [
+                  new docx.Paragraph({
+                    children: [
+                      new docx.TextRun({
+                        text: "🧙‍♂️ MERLIN",
+                        font: "Helvetica",
+                        bold: true,
+                        size: 28,
+                        color: "7C3AED"
+                      })
+                    ],
+                    alignment: docx.AlignmentType.RIGHT,
+                    spacing: { before: 100, after: 100 }
+                  }),
+                  new docx.Paragraph({
+                    children: [
+                      new docx.TextRun({
+                        text: "[Insert Merlin Logo Here]",
+                        font: "Helvetica",
+                        italics: true,
+                        size: 16,
+                        color: "6B7280"
+                      })
+                    ],
+                    alignment: docx.AlignmentType.RIGHT
+                  })
+                ],
+                width: { size: 30, type: docx.WidthType.PERCENTAGE },
+                borders: {
+                  top: { style: docx.BorderStyle.NONE },
+                  bottom: { style: docx.BorderStyle.NONE },
+                  left: { style: docx.BorderStyle.NONE },
+                  right: { style: docx.BorderStyle.NONE }
+                }
+              })
+            ]
           })
         ],
-        alignment: docx.AlignmentType.CENTER,
-        spacing: { after: 200 }
+        width: { size: 100, type: docx.WidthType.PERCENTAGE }
       }),
       
+      // Spacing after header
       new docx.Paragraph({
-        children: [
-          new docx.TextRun({
-            text: "COMMERCIAL QUOTE PROPOSAL",
-            bold: true,
-            size: 24,
-            color: "3B82F6"
-          })
-        ],
-        alignment: docx.AlignmentType.CENTER,
+        children: [new docx.TextRun("")],
         spacing: { after: 400 }
       }),
       
@@ -93,6 +169,7 @@ const doc = new docx.Document({
         children: [
           new docx.TextRun({
             text: "PROJECT INFORMATION",
+            font: "Helvetica",
             bold: true,
             size: 20,
             color: "1F2937"
@@ -106,12 +183,12 @@ const doc = new docx.Document({
           new docx.TableRow({
             children: [
               new docx.TableCell({
-                children: [new docx.Paragraph({ children: [new docx.TextRun({ text: "Client Name:", bold: true })] })],
+                children: [new docx.Paragraph({ children: [new docx.TextRun({ text: "Client Name:", bold: true, font: "Helvetica" })] })],
                 width: { size: 30, type: docx.WidthType.PERCENTAGE },
                 shading: { fill: "F3F4F6" }
               }),
               new docx.TableCell({
-                children: [new docx.Paragraph({ children: [new docx.TextRun("{CLIENT_NAME}")] })],
+                children: [new docx.Paragraph({ children: [new docx.TextRun({ text: "{CLIENT_NAME}", font: "Helvetica" })] })],
                 width: { size: 70, type: docx.WidthType.PERCENTAGE }
               })
             ]
@@ -119,33 +196,33 @@ const doc = new docx.Document({
           new docx.TableRow({
             children: [
               new docx.TableCell({
-                children: [new docx.Paragraph({ children: [new docx.TextRun({ text: "Project Name:", bold: true })] })],
+                children: [new docx.Paragraph({ children: [new docx.TextRun({ text: "Project Name:", bold: true, font: "Helvetica" })] })],
                 shading: { fill: "F3F4F6" }
               }),
               new docx.TableCell({
-                children: [new docx.Paragraph({ children: [new docx.TextRun("{PROJECT_NAME}")] })]
+                children: [new docx.Paragraph({ children: [new docx.TextRun({ text: "{PROJECT_NAME}", font: "Helvetica" })] })]
               })
             ]
           }),
           new docx.TableRow({
             children: [
               new docx.TableCell({
-                children: [new docx.Paragraph({ children: [new docx.TextRun({ text: "Quote Date:", bold: true })] })],
+                children: [new docx.Paragraph({ children: [new docx.TextRun({ text: "Quote Date:", bold: true, font: "Helvetica" })] })],
                 shading: { fill: "F3F4F6" }
               }),
               new docx.TableCell({
-                children: [new docx.Paragraph({ children: [new docx.TextRun("{QUOTE_DATE}")] })]
+                children: [new docx.Paragraph({ children: [new docx.TextRun({ text: "{QUOTE_DATE}", font: "Helvetica" })] })]
               })
             ]
           }),
           new docx.TableRow({
             children: [
               new docx.TableCell({
-                children: [new docx.Paragraph({ children: [new docx.TextRun({ text: "Location:", bold: true })] })],
+                children: [new docx.Paragraph({ children: [new docx.TextRun({ text: "Location:", bold: true, font: "Helvetica" })] })],
                 shading: { fill: "F3F4F6" }
               }),
               new docx.TableCell({
-                children: [new docx.Paragraph({ children: [new docx.TextRun("{LOCATION_REGION}")] })]
+                children: [new docx.Paragraph({ children: [new docx.TextRun({ text: "{LOCATION_REGION}", font: "Helvetica" })] })]
               })
             ]
           })
@@ -179,12 +256,12 @@ const doc = new docx.Document({
           new docx.TableRow({
             children: [
               new docx.TableCell({
-                children: [new docx.Paragraph({ children: [new docx.TextRun({ text: "METRIC", bold: true, color: "FFFFFF" })] })],
+                children: [new docx.Paragraph({ children: [new docx.TextRun({ text: "METRIC", bold: true, color: "FFFFFF", font: "Helvetica" })] })],
                 width: { size: 40, type: docx.WidthType.PERCENTAGE },
                 shading: { fill: "1E40AF" }
               }),
               new docx.TableCell({
-                children: [new docx.Paragraph({ children: [new docx.TextRun({ text: "VALUE", bold: true, color: "FFFFFF" })] })],
+                children: [new docx.Paragraph({ children: [new docx.TextRun({ text: "VALUE", bold: true, color: "FFFFFF", font: "Helvetica" })] })],
                 width: { size: 60, type: docx.WidthType.PERCENTAGE },
                 shading: { fill: "1E40AF" }
               })
@@ -193,7 +270,7 @@ const doc = new docx.Document({
           new docx.TableRow({
             children: [
               new docx.TableCell({
-                children: [new docx.Paragraph({ children: [new docx.TextRun({ text: "System Capacity", bold: true })] })],
+                children: [new docx.Paragraph({ children: [new docx.TextRun({ text: "System Capacity", bold: true, font: "Helvetica" })] })],
                 shading: { fill: "F8FAFC" }
               }),
               new docx.TableCell({
@@ -204,7 +281,7 @@ const doc = new docx.Document({
           new docx.TableRow({
             children: [
               new docx.TableCell({
-                children: [new docx.Paragraph({ children: [new docx.TextRun({ text: "Power Rating", bold: true })] })],
+                children: [new docx.Paragraph({ children: [new docx.TextRun({ text: "Power Rating", bold: true, font: "Helvetica" })] })],
                 shading: { fill: "F8FAFC" }
               }),
               new docx.TableCell({
@@ -215,33 +292,33 @@ const doc = new docx.Document({
           new docx.TableRow({
             children: [
               new docx.TableCell({
-                children: [new docx.Paragraph({ children: [new docx.TextRun({ text: "Total Investment", bold: true })] })],
+                children: [new docx.Paragraph({ children: [new docx.TextRun({ text: "Total Investment", bold: true, font: "Helvetica" })] })],
                 shading: { fill: "F8FAFC" }
               }),
               new docx.TableCell({
-                children: [new docx.Paragraph({ children: [new docx.TextRun({ text: "{GRAND_CAPEX}", bold: true, size: 24, color: "059669" })] })]
+                children: [new docx.Paragraph({ children: [new docx.TextRun({ text: "{GRAND_CAPEX}", bold: true, size: 24, color: "059669", font: "Helvetica" })] })]
               })
             ]
           }),
           new docx.TableRow({
             children: [
               new docx.TableCell({
-                children: [new docx.Paragraph({ children: [new docx.TextRun({ text: "Annual Savings", bold: true })] })],
+                children: [new docx.Paragraph({ children: [new docx.TextRun({ text: "Annual Savings", bold: true, font: "Helvetica" })] })],
                 shading: { fill: "F8FAFC" }
               }),
               new docx.TableCell({
-                children: [new docx.Paragraph({ children: [new docx.TextRun({ text: "{ANNUAL_SAVINGS}", bold: true, size: 24, color: "059669" })] })]
+                children: [new docx.Paragraph({ children: [new docx.TextRun({ text: "{ANNUAL_SAVINGS}", bold: true, size: 24, color: "059669", font: "Helvetica" })] })]
               })
             ]
           }),
           new docx.TableRow({
             children: [
               new docx.TableCell({
-                children: [new docx.Paragraph({ children: [new docx.TextRun({ text: "Payback Period", bold: true })] })],
+                children: [new docx.Paragraph({ children: [new docx.TextRun({ text: "Payback Period", bold: true, font: "Helvetica" })] })],
                 shading: { fill: "F8FAFC" }
               }),
               new docx.TableCell({
-                children: [new docx.Paragraph({ children: [new docx.TextRun({ text: "{ROI_YEARS} years", bold: true, size: 20, color: "7C3AED" })] })]
+                children: [new docx.Paragraph({ children: [new docx.TextRun({ text: "{ROI_YEARS} years", bold: true, size: 20, color: "7C3AED", font: "Helvetica" })] })]
               })
             ]
           })
@@ -288,12 +365,12 @@ const doc = new docx.Document({
               new docx.TableCell({
                 children: [
                   new docx.Paragraph({
-                    children: [new docx.TextRun({ text: "📷 PROJECT SITE PHOTO", bold: true, size: 16 })],
+                    children: [new docx.TextRun({ text: "📷 PROJECT SITE PHOTO", bold: true, size: 16, font: "Helvetica" })],
                     alignment: docx.AlignmentType.CENTER,
                     spacing: { before: 400, after: 400 }
                   }),
                   new docx.Paragraph({
-                    children: [new docx.TextRun({ text: "[Insert aerial or ground-level photo of installation site]", italics: true })],
+                    children: [new docx.TextRun({ text: "[Insert aerial or ground-level photo of installation site]", italics: true, font: "Helvetica" })],
                     alignment: docx.AlignmentType.CENTER
                   })
                 ],
@@ -304,12 +381,12 @@ const doc = new docx.Document({
               new docx.TableCell({
                 children: [
                   new docx.Paragraph({
-                    children: [new docx.TextRun({ text: "🔧 SYSTEM DIAGRAM", bold: true, size: 16 })],
+                    children: [new docx.TextRun({ text: "🔧 SYSTEM DIAGRAM", bold: true, size: 16, font: "Helvetica" })],
                     alignment: docx.AlignmentType.CENTER,
                     spacing: { before: 400, after: 400 }
                   }),
                   new docx.Paragraph({
-                    children: [new docx.TextRun({ text: "[Insert technical diagram showing BESS configuration and connections]", italics: true })],
+                    children: [new docx.TextRun({ text: "[Insert technical diagram showing BESS configuration and connections]", italics: true, font: "Helvetica" })],
                     alignment: docx.AlignmentType.CENTER
                   })
                 ],
@@ -343,17 +420,17 @@ const doc = new docx.Document({
           new docx.TableRow({
             children: [
               new docx.TableCell({
-                children: [new docx.Paragraph({ children: [new docx.TextRun({ text: "COMPONENT", bold: true, color: "FFFFFF" })] })],
+                children: [new docx.Paragraph({ children: [new docx.TextRun({ text: "COMPONENT", bold: true, color: "FFFFFF", font: "Helvetica" })] })],
                 width: { size: 35, type: docx.WidthType.PERCENTAGE },
                 shading: { fill: "1E40AF" }
               }),
               new docx.TableCell({
-                children: [new docx.Paragraph({ children: [new docx.TextRun({ text: "SPECIFICATION", bold: true, color: "FFFFFF" })] })],
+                children: [new docx.Paragraph({ children: [new docx.TextRun({ text: "SPECIFICATION", bold: true, color: "FFFFFF", font: "Helvetica" })] })],
                 width: { size: 35, type: docx.WidthType.PERCENTAGE },
                 shading: { fill: "1E40AF" }
               }),
               new docx.TableCell({
-                children: [new docx.Paragraph({ children: [new docx.TextRun({ text: "COST (USD)", bold: true, color: "FFFFFF" })] })],
+                children: [new docx.Paragraph({ children: [new docx.TextRun({ text: "COST (USD)", bold: true, color: "FFFFFF", font: "Helvetica" })] })],
                 width: { size: 30, type: docx.WidthType.PERCENTAGE },
                 shading: { fill: "1E40AF" }
               })

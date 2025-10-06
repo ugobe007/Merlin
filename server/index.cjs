@@ -432,7 +432,7 @@ app.post('/api/export/excel', async (req, res) => {
     ws.mergeCells('A1:E1');
     const titleCell = ws.getCell('A1');
     titleCell.value = 'BATTERY ENERGY STORAGE SYSTEM - FINANCIAL ANALYSIS';
-    titleCell.font = { size: 16, bold: true, color: { argb: colors.darkBlue } };
+    titleCell.font = { size: 16, bold: true, color: { argb: colors.darkBlue }, name: 'Helvetica' };
     titleCell.alignment = { horizontal: 'center', vertical: 'middle' };
     titleCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: colors.headerBlue } };
 
@@ -440,7 +440,7 @@ app.post('/api/export/excel', async (req, res) => {
     ws.mergeCells('A2:E2');
     const projectCell = ws.getCell('A2');
     projectCell.value = `Project: ${inputs.projectName || 'BESS Installation'} | Date: ${new Date().toLocaleDateString()}`;
-    projectCell.font = { size: 12, bold: true };
+    projectCell.font = { size: 12, bold: true, name: 'Helvetica' };
     projectCell.alignment = { horizontal: 'center' };
 
     // Financial Summary Section (Top Right)
@@ -450,7 +450,7 @@ app.post('/api/export/excel', async (req, res) => {
     ws.mergeCells(`D${currentRow}:E${currentRow}`);
     const summaryHeaderCell = ws.getCell(`D${currentRow}`);
     summaryHeaderCell.value = 'EXECUTIVE FINANCIAL SUMMARY';
-    summaryHeaderCell.font = { size: 14, bold: true, color: { argb: colors.white } };
+    summaryHeaderCell.font = { size: 14, bold: true, color: { argb: colors.white }, name: 'Helvetica' };
     summaryHeaderCell.alignment = { horizontal: 'center', vertical: 'middle' };
     summaryHeaderCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: colors.darkBlue } };
     summaryHeaderCell.border = {
@@ -475,7 +475,7 @@ app.post('/api/export/excel', async (req, res) => {
       // Label cell
       const labelCell = ws.getCell(`D${currentRow}`);
       labelCell.value = label;
-      labelCell.font = { bold: true, color: { argb: textColor } };
+      labelCell.font = { bold: true, color: { argb: textColor }, name: 'Helvetica' };
       labelCell.alignment = { horizontal: 'left', vertical: 'middle' };
       labelCell.fill = { 
         type: 'pattern', 
@@ -490,7 +490,7 @@ app.post('/api/export/excel', async (req, res) => {
       // Value cell
       const valueCell = ws.getCell(`E${currentRow}`);
       valueCell.value = value;
-      valueCell.font = { bold: isTotal, size: isTotal ? 12 : 11, color: { argb: textColor } };
+      valueCell.font = { bold: isTotal, size: isTotal ? 12 : 11, color: { argb: textColor }, name: 'Helvetica' };
       valueCell.alignment = { horizontal: 'right', vertical: 'middle' };
       valueCell.fill = { 
         type: 'pattern', 
@@ -511,7 +511,7 @@ app.post('/api/export/excel', async (req, res) => {
     // Column headers for detailed analysis
     const headerCell1 = ws.getCell(`A${currentRow}`);
     headerCell1.value = 'COMPONENT / PARAMETER';
-    headerCell1.font = { bold: true, color: { argb: colors.white } };
+    headerCell1.font = { bold: true, color: { argb: colors.white }, name: 'Helvetica' };
     headerCell1.alignment = { horizontal: 'center', vertical: 'middle' };
     headerCell1.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: colors.darkBlue } };
     headerCell1.border = {
@@ -521,7 +521,7 @@ app.post('/api/export/excel', async (req, res) => {
 
     const headerCell2 = ws.getCell(`B${currentRow}`);
     headerCell2.value = 'VALUE';
-    headerCell2.font = { bold: true, color: { argb: colors.white } };
+    headerCell2.font = { bold: true, color: { argb: colors.white }, name: 'Helvetica' };
     headerCell2.alignment = { horizontal: 'center', vertical: 'middle' };
     headerCell2.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: colors.darkBlue } };
     headerCell2.border = {
@@ -603,7 +603,7 @@ app.post('/api/export/excel', async (req, res) => {
       ws.mergeCells(`A${currentRow}:B${currentRow}`);
       const sectionHeaderCell = ws.getCell(`A${currentRow}`);
       sectionHeaderCell.value = section.title;
-      sectionHeaderCell.font = { bold: true, size: 12, color: { argb: colors.darkBlue } };
+      sectionHeaderCell.font = { bold: true, size: 12, color: { argb: colors.darkBlue }, name: 'Helvetica' };
       sectionHeaderCell.alignment = { horizontal: 'center', vertical: 'middle' };
       sectionHeaderCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: section.color } };
       sectionHeaderCell.border = {
@@ -619,7 +619,7 @@ app.post('/api/export/excel', async (req, res) => {
         // Field name
         const fieldCell = ws.getCell(`A${currentRow}`);
         fieldCell.value = field;
-        fieldCell.font = { bold: isTotal };
+        fieldCell.font = { bold: isTotal, name: 'Helvetica' };
         fieldCell.alignment = { horizontal: 'left', vertical: 'middle' };
         fieldCell.border = {
           top: { style: 'thin' }, bottom: { style: 'thin' },
@@ -629,7 +629,7 @@ app.post('/api/export/excel', async (req, res) => {
         // Value
         const valueCell = ws.getCell(`B${currentRow}`);
         valueCell.value = value;
-        valueCell.font = { bold: isTotal };
+        valueCell.font = { bold: isTotal, name: 'Helvetica' };
         valueCell.alignment = { horizontal: 'right', vertical: 'middle' };
         if (isTotal) {
           valueCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: colors.totalYellow } };
@@ -651,8 +651,20 @@ app.post('/api/export/excel', async (req, res) => {
     ws.mergeCells(`A${currentRow}:E${currentRow}`);
     const footerCell = ws.getCell(`A${currentRow}`);
     footerCell.value = `Generated on ${new Date().toLocaleDateString()} | Merlin BESS Quote Builder | Confidential`;
-    footerCell.font = { size: 10, italic: true, color: { argb: '666666' } };
+    footerCell.font = { size: 10, italic: true, color: { argb: '666666' }, name: 'Helvetica' };
     footerCell.alignment = { horizontal: 'center' };
+
+    // Add Merlin branding in lower right corner
+    const brandingRow = currentRow + 2;
+    const brandingCell = ws.getCell(`E${brandingRow}`);
+    brandingCell.value = '⚡ Merlin';
+    brandingCell.font = { size: 14, bold: true, color: { argb: colors.darkBlue }, name: 'Helvetica' };
+    brandingCell.alignment = { horizontal: 'right', vertical: 'middle' };
+    brandingCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: colors.headerBlue } };
+    brandingCell.border = {
+      top: { style: 'thick' }, bottom: { style: 'thick' },
+      left: { style: 'thick' }, right: { style: 'thick' }
+    };
 
     const buf = await wb.xlsx.writeBuffer()
     
