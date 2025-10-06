@@ -39,12 +39,7 @@ app.use(cors({
 
 app.use(bodyParser.json({ limit: '5mb' }))
 
-// Serve static files from the dist directory in production
-if (process.env.NODE_ENV === 'production') {
-  app.use(express.static(path.join(process.cwd(), 'dist')));
-}
-
-// Database API routes
+// Database API routes  
 app.use('/api/db', databaseRoutes)
 
 // Request logging middleware
@@ -378,11 +373,12 @@ if (process.env.NODE_ENV === 'production') {
   app.use(express.static(path.resolve(process.cwd(), 'dist')));
   
   // Handle client-side routing - serve index.html for all non-API routes
-  app.get('*', (req, res) => {
-    // Don't interfere with API routes
+  app.use((req, res, next) => {
+    // Skip API routes
     if (req.path.startsWith('/api/')) {
-      return res.status(404).json({ error: 'API endpoint not found' });
+      return next();
     }
+    // Serve React app for all other routes
     res.sendFile(path.resolve(process.cwd(), 'dist', 'index.html'));
   });
 }
