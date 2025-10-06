@@ -111,6 +111,7 @@ export default function BessQuoteBuilder() {
   const [showVendorManager, setShowVendorManager] = useState(false)
   const [showDatabaseTest, setShowDatabaseTest] = useState(false)
   const [showUserProfile, setShowUserProfile] = useState(false)
+  const [showLoadProject, setShowLoadProject] = useState(false)
   const [currentPrice, setCurrentPrice] = useState<number | null>(0.12)
   const [magicalExport, setMagicalExport] = useState(false)
 
@@ -551,20 +552,12 @@ export default function BessQuoteBuilder() {
           >
             Save to Profile
           </button>
-          <select
-            className="border p-2 rounded"
-            onChange={e => {
-              const idx = Number(e.target.value)
-              if (!Number.isNaN(idx)) applyProject(projects[idx])
-            }}
+          <button 
+            className="border rounded px-3 py-2 bg-purple-100 hover:bg-purple-200 text-purple-800"
+            onClick={() => setShowLoadProject(true)}
           >
-            <option value="">Load project…</option>
-            {projects.map((p, i) => (
-              <option key={p.name + p.createdAt} value={i}>
-                {p.name} — {new Date(p.createdAt).toLocaleString()}
-              </option>
-            ))}
-          </select>
+            Load Project
+          </button>
         </div>
       </header>
 
@@ -848,6 +841,75 @@ export default function BessQuoteBuilder() {
           alert(`Loaded quote: ${quote.project_name}`);
         }}
       />
+
+      {/* Load Project Modal */}
+      {showLoadProject && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg max-w-2xl w-full mx-4 max-h-[80vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold text-purple-800">Load Project</h2>
+              <button 
+                onClick={() => setShowLoadProject(false)}
+                className="text-gray-500 hover:text-gray-700 text-2xl"
+              >
+                ×
+              </button>
+            </div>
+            
+            {projects.length === 0 ? (
+              <p className="text-gray-600 text-center py-8">No saved projects found.</p>
+            ) : (
+              <div className="space-y-2">
+                {projects.map((project) => (
+                  <div 
+                    key={project.name + project.createdAt}
+                    className="border rounded-lg p-4 hover:bg-purple-50 cursor-pointer transition-colors"
+                    onClick={() => {
+                      applyProject(project);
+                      setShowLoadProject(false);
+                      alert(`Loaded project: ${project.name}`);
+                    }}
+                  >
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <h3 className="font-semibold text-purple-800">{project.name}</h3>
+                        <p className="text-sm text-gray-600">
+                          {new Date(project.createdAt).toLocaleDateString()} at {new Date(project.createdAt).toLocaleTimeString()}
+                        </p>
+                        {project.inputs && (
+                          <p className="text-sm text-gray-500 mt-1">
+                            {project.inputs.powerMW}MW • {project.inputs.standbyHours}h • {project.inputs.gridMode}
+                          </p>
+                        )}
+                      </div>
+                      <button 
+                        className="px-3 py-1 bg-purple-100 hover:bg-purple-200 text-purple-800 rounded text-sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          applyProject(project);
+                          setShowLoadProject(false);
+                          alert(`Loaded project: ${project.name}`);
+                        }}
+                      >
+                        Load
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            
+            <div className="mt-6 flex justify-end">
+              <button 
+                onClick={() => setShowLoadProject(false)}
+                className="px-4 py-2 border rounded hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
