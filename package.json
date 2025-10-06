@@ -3,7 +3,6 @@
   "private": false,
   "version": "1.0.0",
   "description": "Professional BESS (Battery Energy Storage System) quote builder with vendor management and database integration",
-  "type": "module",
   "main": "server/index.cjs",
   "scripts": {
     "dev": "vite",
