@@ -3,6 +3,7 @@ import newMerlin from '../assets/images/new_Merlin.png'
 import { loadAll, saveProject, deleteProject } from '../lib/store'
 import VendorManager from './VendorManager'
 import DatabaseTest from './DatabaseTest'
+import { parseVendorQuoteFile } from '../utils/fileParser'
 
 
 type Region = 'US' | 'UK' | 'EU' | 'Other'
@@ -194,45 +195,50 @@ export default function BessQuoteBuilder() {
     setOut(calc(inputs, next))
   }
 
-  async function parseCSV(text: string, fileName: string) {
-    const lines = text.trim().split(/\r?\n/)
-    if (lines.length < 2) return
-    const headers = lines[0].split(',').map(h => h.trim())
-    const row = lines[1].split(',').map(v => v.trim())
-    const obj: any = {}
-    headers.forEach((h, idx) => {
-      if (!h) return
-      const v = row[idx]
-      if (h.startsWith('tariffByRegion.')) {
-        const region = h.split('.')[1] as Region
-        obj.tariffByRegion = obj.tariffByRegion || {}
-        obj.tariffByRegion[region] = Number(v)
-      } else {
-        obj[h] = /^\d+(\.\d+)?$/.test(v) ? Number(v) : v
-      }
-    })
-    obj.vendorName = obj.vendorName || 'Vendor CSV Import'
-    obj.vendorFile = fileName
-    obj.vendorDate = new Date().toLocaleString()
-    applyOverrides(obj)
-  }
-
   async function handleOverridesFile(file: File) {
-    const text = await file.text()
     try {
-      if (file.name.endsWith('.json')) {
-        const obj = JSON.parse(text)
-        obj.vendorName = obj.vendorName || 'Vendor JSON Import'
-        obj.vendorFile = file.name
-        obj.vendorDate = new Date().toLocaleString()
-        applyOverrides(obj)
-      } else if (file.name.endsWith('.csv')) {
-        await parseCSV(text, file.name)
-      } else {
-        alert('Unsupported file type. Please upload .json or .csv')
+      const parsed = await parseVendorQuoteFile(file);
+      
+      // Create override object from parsed data
+      const overrides: any = {
+        vendorName: parsed.vendorName,
+        vendorFile: parsed.vendorFile,
+        vendorDate: parsed.vendorDate,
+        originalFormat: parsed.originalFormat,
+        extractedData: parsed.extractedData
+      };
+      
+      // Try to map extracted data to our assumptions if possible
+      const extracted = parsed.extractedData;
+      if (extracted) {
+        // Look for common pricing fields and map them
+        Object.keys(extracted).forEach(key => {
+          const lowerKey = key.toLowerCase();
+          const value = extracted[key];
+          
+          // Try to extract numeric values from strings
+          const numMatch = String(value).match(/[\d,]+\.?\d*/);
+          const numValue = numMatch ? parseFloat(numMatch[0].replace(/,/g, '')) : null;
+          
+          if (lowerKey.includes('battery') && lowerKey.includes('kwh') && numValue) {
+            overrides.batteryCostPerKWh = numValue;
+          } else if (lowerKey.includes('pcs') && lowerKey.includes('kw') && numValue) {
+            overrides.pcsCostPerKW = numValue;
+          } else if (lowerKey.includes('bos') && numValue) {
+            overrides.bosCostPerKWh = numValue;
+          } else if (lowerKey.includes('epc') && numValue) {
+            overrides.epcCostPerKWh = numValue;
+          }
+        });
       }
-    } catch (e: any) {
-      alert(`Failed to parse overrides: ${e.message}`)
+      
+      applyOverrides(overrides);
+      
+      // Show success message with file format
+      alert(`Successfully imported ${parsed.originalFormat.toUpperCase()} file: ${file.name}\n\nExtracted ${Object.keys(parsed.extractedData).length} data fields for analysis.`);
+      
+    } catch (error: any) {
+      alert(`Failed to parse file: ${error.message}\n\nSupported formats: Excel (.xlsx), Word (.docx), PDF (.pdf)`);
     }
   }
 
@@ -541,44 +547,18 @@ export default function BessQuoteBuilder() {
 
           <div className="flex flex-wrap gap-2 pt-2">
             <button className="px-3 py-2 border rounded" onClick={() => fileInputRef.current?.click()}>
-              Upload Vendor Quote (.json / .csv)
+              Upload Vendor Quote (Excel/Word/PDF)
             </button>
             <input
               ref={fileInputRef}
               type="file"
-              accept=".json,.csv"
+              accept=".xlsx,.xls,.docx,.doc,.pdf"
               className="hidden"
               onChange={(e) => {
                 const f = e.target.files?.[0]
                 if (f) handleOverridesFile(f).finally(() => { if (fileInputRef.current) fileInputRef.current.value = '' })
               }}
             />
-            <button
-              className="px-3 py-2 border rounded"
-              onClick={() => {
-                const template = {
-                  batteryCostPerKWh: assm.batteryCostPerKWh,
-                  pcsCostPerKW: assm.pcsCostPerKW,
-                  bosPct: assm.bosPct,
-                  epcPct: assm.epcPct,
-                  offgridFactor: assm.offgridFactor,
-                  ongridFactor: assm.ongridFactor,
-                  genCostPerKW: assm.genCostPerKW,
-                  solarCostPerKWp: assm.solarCostPerKWp,
-                  windCostPerKW: assm.windCostPerKW,
-                  tariffByRegion: assm.tariffByRegion,
-                }
-                const blob = new Blob([JSON.stringify(template, null, 2)], { type: 'application/json' })
-                const url = URL.createObjectURL(blob)
-                const a = document.createElement('a')
-                a.href = url
-                a.download = 'assumptions_template.json'
-                a.click()
-                URL.revokeObjectURL(url)
-              }}
-            >
-              Download JSON Template
-            </button>
             <button
               className="px-3 py-2 border rounded"
               onClick={() => {
