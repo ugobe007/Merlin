@@ -1228,7 +1228,7 @@ export default function BessQuoteBuilder() {
                                 ...wizardData,
                                 hybridConfig: {
                                   ...wizardData.hybridConfig,
-                                  generationType: type.value
+                                  generationType: type.value as 'solar' | 'wind' | 'generator' | 'mixed'
                                 }
                               })}
                             >
@@ -1280,7 +1280,7 @@ export default function BessQuoteBuilder() {
                     <button
                       className="px-6 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors disabled:opacity-50"
                       style={{ color: '#FDE047', fontWeight: 'bold', textShadow: '1px 1px 2px rgba(0,0,0,0.8)' }}
-                      disabled={!wizardData.application || !wizardData.equipmentNeeded.bess}
+                      disabled={!wizardData.application || (!wizardData.equipmentNeeded.bess && !wizardData.equipmentNeeded.hybrid)}
                       onClick={() => setWizardStep(2)}
                     >
                       Next Step →
