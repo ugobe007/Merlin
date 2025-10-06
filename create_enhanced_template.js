@@ -133,12 +133,12 @@ const doc = new docx.Document({
                   }),
                   new docx.Paragraph({
                     children: [
-                      new docx.ImageRun({
-                        data: fs.readFileSync('./server/merlin-logo.png'),
-                        transformation: {
-                          width: 60,
-                          height: 60,
-                        },
+                      new docx.TextRun({
+                        text: "[MERLIN_LOGO_PLACEHOLDER]",
+                        font: "Helvetica",
+                        italics: true,
+                        size: 16,
+                        color: "6B7280"
                       })
                     ],
                     alignment: docx.AlignmentType.RIGHT
