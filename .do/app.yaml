@@ -1,0 +1,21 @@
+name: merlin-bess-quote-builder
+services:
+- name: web
+  source_dir: /
+  github:
+    repo: ugobe007/Merlin
+    branch: main
+    deploy_on_push: true
+  run_command: npm start
+  build_command: npm install && npm run build
+  environment_slug: node-js
+  instance_count: 1
+  instance_size_slug: basic-xxs
+  envs:
+  - key: NODE_ENV
+    value: production
+  health_check:
+    http_path: /api/health
+  routes:
+  - path: /
+  
