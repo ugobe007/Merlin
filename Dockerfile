@@ -1,5 +1,5 @@
 # Use Node.js version with build tools
-FROM node:18-alpine
+FROM node:20-alpine
 
 # Install dependencies needed for better-sqlite3
 RUN apk add --no-cache python3 py3-setuptools make g++ sqlite
@@ -20,7 +20,7 @@ COPY . .
 RUN ls -la server/templates/ || echo "Templates directory not found"
 
 # Build the React application
-RUN npm run build
+RUN NODE_ENV=development npm run build
 
 # Remove dev dependencies to reduce image size
 RUN npm prune --production
