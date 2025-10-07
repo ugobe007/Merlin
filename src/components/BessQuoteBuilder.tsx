@@ -1002,50 +1002,8 @@ export default function BessQuoteBuilder() {
             value={projectName}
             onChange={e => setProjectName(e.target.value)}
           />
-          <button className="bg-yellow-400 border border-yellow-500 rounded px-3 py-2 shadow-sm hover:bg-yellow-500 transition-colors font-semibold text-gray-800" onClick={handleSaveProject}>
+          <button className="bg-blue-100 border border-blue-300 rounded px-3 py-2 shadow-sm hover:bg-blue-200 transition-colors font-semibold text-blue-800" onClick={handleSaveProject}>
             💾 Save Project
-          </button>
-          <button 
-            className="border rounded px-3 py-2 bg-blue-50 hover:bg-blue-100" 
-            onClick={async () => {
-              const token = localStorage.getItem('auth_token');
-              if (!token) {
-                alert('Please sign in to save quotes');
-                setShowUserProfile(true);
-                return;
-              }
-
-              try {
-                const API_BASE = process.env.NODE_ENV === 'development' 
-                  ? 'http://localhost:5001'
-                  : '';
-
-                const response = await fetch(`${API_BASE}/api/auth/quotes`, {
-                  method: 'POST',
-                  headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                  },
-                  body: JSON.stringify({
-                    project_name: projectName || `Quote ${new Date().toLocaleString()}`,
-                    inputs,
-                    assumptions: assm,
-                    outputs: out
-                  })
-                });
-
-                if (response.ok) {
-                  alert('Quote saved to your profile!');
-                } else {
-                  const error = await response.json();
-                  alert(`Failed to save quote: ${error.error || 'Unknown error'}`);
-                }
-              } catch (error) {
-                alert('Failed to save quote. Please try again.');
-              }
-            }}
-          >
-            Save to Profile
           </button>
           <button 
             className="border rounded px-3 py-2 bg-purple-100 hover:bg-purple-200 text-purple-800"
@@ -1054,7 +1012,7 @@ export default function BessQuoteBuilder() {
             Load Project
           </button>
           <button 
-            className="bg-yellow-400 border border-yellow-500 rounded px-3 py-2 shadow-sm hover:bg-yellow-500 transition-colors font-semibold text-gray-800"
+            className="bg-purple-600 border border-purple-700 rounded px-3 py-2 shadow-sm hover:bg-purple-700 transition-colors font-bold text-yellow-400"
             onClick={() => {
               const token = localStorage.getItem('auth_token');
               if (!token) {
