@@ -30,9 +30,10 @@ interface UserProfileProps {
   isOpen: boolean;
   onClose: () => void;
   onLoadQuote?: (quote: SavedQuote) => void;
+  onOpenPortfolio?: () => void;
 }
 
-const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, onLoadQuote }) => {
+const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, onLoadQuote, onOpenPortfolio }) => {
   const [user, setUser] = useState<User | null>(null);
   const [quotes, setQuotes] = useState<SavedQuote[]>([]);
   const [loading, setLoading] = useState(false);
@@ -545,6 +546,17 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, onLoadQuote 
                 >
                   Saved Quotes ({quotes.length})
                 </button>
+                {onOpenPortfolio && (
+                  <button
+                    onClick={() => {
+                      onOpenPortfolio();
+                      onClose();
+                    }}
+                    className="px-4 py-2 rounded bg-gradient-to-r from-purple-600 to-blue-600 text-white hover:from-purple-700 hover:to-blue-700 transition-all"
+                  >
+                    📁 Full Portfolio
+                  </button>
+                )}
               </div>
               <button
                 onClick={handleLogout}

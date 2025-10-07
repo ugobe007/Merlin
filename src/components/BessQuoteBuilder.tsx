@@ -4,6 +4,7 @@ import { loadAll, saveProject } from '../lib/store'
 import VendorManager from './VendorManager'
 import DatabaseTest from './DatabaseTest'
 import UserProfile from './UserProfile'
+import Portfolio from './Portfolio'
 import { parseVendorQuoteFile } from '../utils/fileParser'
 import { playMagicWandSound } from '../utils/magicSound'
 
@@ -244,6 +245,7 @@ export default function BessQuoteBuilder() {
   const [showDatabaseTest, setShowDatabaseTest] = useState(false)
   const [showUserProfile, setShowUserProfile] = useState(false)
   const [showLoadProject, setShowLoadProject] = useState(false)
+  const [showPortfolio, setShowPortfolio] = useState(false)
   const [currentPrice, setCurrentPrice] = useState<number | null>(0.12)
   const [magicalExport, setMagicalExport] = useState(false)
   const [showSmartWizard, setShowSmartWizard] = useState(false)
@@ -626,13 +628,74 @@ export default function BessQuoteBuilder() {
     }
     
     console.log('Saving project snapshot:', snap);
-    saveProject(snap)
     
+    // Save to localStorage for backwards compatibility
+    saveProject(snap)
     const updatedProjects = loadAll();
     console.log('Updated projects after save:', updatedProjects);
     setProjects(updatedProjects)
     
+    // Also save to user's portfolio if logged in
+    saveToPortfolio(snap);
+    
     alert(`Project "${snap.name}" saved successfully!`);
+  }
+
+  async function saveToPortfolio(projectData: any) {
+    try {
+      const token = localStorage.getItem('auth_token');
+      if (!token) {
+        console.log('No auth token - saving to localStorage only');
+        return;
+      }
+
+      // Calculate outputs for the portfolio
+      const outputs = calc(projectData.inputs, projectData.assumptions);
+
+      const portfolioData = {
+        project_name: projectData.name,
+        inputs: JSON.stringify(projectData.inputs),
+        assumptions: JSON.stringify(projectData.assumptions),
+        outputs: JSON.stringify(outputs),
+        tags: '', // Could be enhanced later
+        notes: `Saved from Smart Wizard on ${new Date().toLocaleString()}`
+      };
+
+      const response = await fetch('/api/auth/quotes', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(portfolioData)
+      });
+
+      if (response.ok) {
+        console.log('Project saved to portfolio successfully');
+      } else {
+        console.error('Failed to save to portfolio:', await response.text());
+      }
+    } catch (error) {
+      console.error('Error saving to portfolio:', error);
+    }
+  }
+
+  function handleLoadFromPortfolio(quote: any) {
+    try {
+      const inputs = typeof quote.inputs === 'string' ? JSON.parse(quote.inputs) : quote.inputs;
+      const assumptions = typeof quote.assumptions === 'string' ? JSON.parse(quote.assumptions) : quote.assumptions;
+      
+      setInputs(inputs);
+      setAssm(assumptions);
+      setProjectName(quote.project_name);
+      localStorage.setItem('merlin_assumptions', JSON.stringify(assumptions));
+      setOut(calc(inputs, assumptions));
+      
+      alert(`Loaded project: ${quote.project_name}`);
+    } catch (error) {
+      console.error('Error loading from portfolio:', error);
+      alert('Failed to load project from portfolio');
+    }
   }
 
   function applyProject(p: any) {
@@ -990,6 +1053,20 @@ export default function BessQuoteBuilder() {
           >
             Load Project
           </button>
+          <button 
+            className="border rounded px-3 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white hover:from-purple-700 hover:to-blue-700 transition-all shadow-sm"
+            onClick={() => {
+              const token = localStorage.getItem('auth_token');
+              if (!token) {
+                alert('Please sign in to access your portfolio');
+                setShowUserProfile(true);
+                return;
+              }
+              setShowPortfolio(true);
+            }}
+          >
+            📁 Portfolio
+          </button>
         </div>
       </header>
 
@@ -1303,7 +1380,19 @@ export default function BessQuoteBuilder() {
           setShowUserProfile(false);
           alert(`Loaded quote: ${quote.project_name}`);
         }}
+        onOpenPortfolio={() => {
+          setShowUserProfile(false);
+          setShowPortfolio(true);
+        }}
       />
+
+      {/* Portfolio Modal */}
+      {showPortfolio && (
+        <Portfolio
+          onClose={() => setShowPortfolio(false)}
+          onLoadQuote={handleLoadFromPortfolio}
+        />
+      )}
 
       {/* Smart Wizard Modal */}
       {showSmartWizard && (
