@@ -1800,12 +1800,107 @@ export default function BessQuoteBuilder() {
                     </div>
                   </div>
 
+                  {/* Cost Summary Section */}
+                  <div className="bg-gradient-to-r from-green-50 to-blue-50 p-6 rounded-lg border-2 border-green-200 shadow-lg">
+                    <h4 className="text-xl font-bold text-green-800 mb-4 flex items-center">
+                      💰 Cost Summary
+                    </h4>
+                    {(() => {
+                      // Calculate costs based on current inputs and wizard configuration
+                      const currentInputs = {
+                        ...inputs,
+                        powerMW: wizardData.powerMW,
+                        gridMode: (wizardData.gridConnection === 'behind' ? 'on-grid' : 'off-grid') as 'on-grid' | 'off-grid',
+                        locationRegion: wizardData.worldRegion,
+                        generatorMW: wizardData.equipmentNeeded.powerGeneration ? wizardData.hybridConfig.generationMW : undefined,
+                        solarMWp: wizardData.equipmentNeeded.solar ? wizardData.hybridConfig.generationMW : undefined,
+                        windMW: wizardData.equipmentNeeded.wind ? wizardData.hybridConfig.generationMW : undefined,
+                        useCase: wizardData.applications.join(', ') || 'General Application'
+                      };
+                      const costData = calc(currentInputs, assm);
+                      
+                      return (
+                        <div className="space-y-3">
+                          <div className="bg-white p-4 rounded-lg border border-green-300">
+                            <div className="text-center">
+                              <div className="text-3xl font-black text-green-700 mb-2">
+                                ${costData.grandCapex.toLocaleString()}
+                              </div>
+                              <div className="text-lg font-bold text-green-600">
+                                Total Project Cost
+                              </div>
+                              <div className="text-sm text-gray-600 mt-1">
+                                (Including warranty & installation)
+                              </div>
+                            </div>
+                          </div>
+                          
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="bg-white p-3 rounded-lg border border-blue-200">
+                              <div className="text-lg font-bold text-blue-700">
+                                ${costData.grandCapexBeforeWarranty.toLocaleString()}
+                              </div>
+                              <div className="text-sm font-semibold text-blue-600">
+                                Equipment Cost
+                              </div>
+                              <div className="text-xs text-gray-500">
+                                Before warranty
+                              </div>
+                            </div>
+                            
+                            {costData.annualSavings > 0 && (
+                              <div className="bg-white p-3 rounded-lg border border-purple-200">
+                                <div className="text-lg font-bold text-purple-700">
+                                  ${costData.annualSavings.toLocaleString()}
+                                </div>
+                                <div className="text-sm font-semibold text-purple-600">
+                                  Annual Savings
+                                </div>
+                                <div className="text-xs text-gray-500">
+                                  Per year estimated
+                                </div>
+                              </div>
+                            )}
+                            
+                            {costData.roiYears && (
+                              <div className="bg-white p-3 rounded-lg border border-orange-200">
+                                <div className="text-lg font-bold text-orange-700">
+                                  {costData.roiYears.toFixed(1)} years
+                                </div>
+                                <div className="text-sm font-semibold text-orange-600">
+                                  Payback Period
+                                </div>
+                                <div className="text-xs text-gray-500">
+                                  Return on investment
+                                </div>
+                              </div>
+                            )}
+                            
+                            {costData.budgetDelta && (
+                              <div className={`bg-white p-3 rounded-lg border ${costData.budgetDelta > 0 ? 'border-green-200' : 'border-red-200'}`}>
+                                <div className={`text-lg font-bold ${costData.budgetDelta > 0 ? 'text-green-700' : 'text-red-700'}`}>
+                                  {costData.budgetDelta > 0 ? '+' : ''}${costData.budgetDelta.toLocaleString()}
+                                </div>
+                                <div className={`text-sm font-semibold ${costData.budgetDelta > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                  Budget Variance
+                                </div>
+                                <div className="text-xs text-gray-500">
+                                  {costData.budgetDelta > 0 ? 'Under budget' : 'Over budget'}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })()}
+                  </div>
+
                   <div className="bg-purple-50 p-4 rounded-lg border border-purple-200">
-                    <h4 className="font-medium text-purple-800 mb-2">Configuration Preview</h4>
-                    <div className="text-sm text-purple-700 space-y-1">
-                      <div>• Power Required: {wizardData.powerMW} MW</div>
-                      <div>• Grid Connection: {wizardData.gridConnection === 'behind' ? 'Behind the meter' : 'Front of meter'}</div>
-                      <div>• Equipment: {Object.entries(wizardData.equipmentNeeded)
+                    <h4 className="font-bold text-purple-800 mb-3 text-lg">📋 Configuration Summary</h4>
+                    <div className="text-sm text-purple-700 space-y-2">
+                      <div className="font-semibold">• Power Required: <span className="font-bold text-purple-900">{wizardData.powerMW} MW</span></div>
+                      <div className="font-semibold">• Grid Connection: <span className="font-bold text-purple-900">{wizardData.gridConnection === 'behind' ? 'Behind the meter' : 'Front of meter'}</span></div>
+                      <div className="font-semibold">• Equipment: <span className="font-bold text-purple-900">{Object.entries(wizardData.equipmentNeeded)
                         .filter(([_, selected]) => selected)
                         .map(([key, _]) => {
                           const labels: {[k: string]: string} = {
@@ -1817,17 +1912,17 @@ export default function BessQuoteBuilder() {
                             grid: 'Grid'
                           }
                           return labels[key]
-                        }).join(', ')}</div>
+                        }).join(', ')}</span></div>
                       {wizardData.equipmentNeeded.hybrid && (
-                        <div>• Hybrid Config: {wizardData.hybridConfig.generationMW}MW generation + {wizardData.hybridConfig.storageMWh}MWh storage ({wizardData.hybridConfig.generationType})</div>
+                        <div className="font-semibold">• Hybrid Config: <span className="font-bold text-purple-900">{wizardData.hybridConfig.generationMW}MW generation + {wizardData.hybridConfig.storageMWh}MWh storage ({wizardData.hybridConfig.generationType})</span></div>
                       )}
-                      <div>• Applications: {wizardData.applications.join(', ')}</div>
-                      <div>• Budget Range: {wizardData.budgetRange.replace('under500k', 'Under $500K').replace('500k-2m', '$500K-$2M').replace('2m-10m', '$2M-$10M').replace('10m+', '$10M+').replace('flexible', 'Flexible')}</div>
-                      <div>• System Size: {wizardData.powerNeeds} ({wizardData.powerNeeds === 'small' ? '< 2MW' : wizardData.powerNeeds === 'medium' ? '2-10MW' : '> 10MW'})</div>
-                      <div>• Location: {wizardData.location}</div>
-                      <div>• Tariff Region: {wizardData.worldRegion}</div>
-                      {wizardData.shippingLocation && <div>• Shipping: {wizardData.shippingLocation}</div>}
-                      {wizardData.primaryGoal && <div>• Primary Goal: {wizardData.primaryGoal.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}</div>}
+                      <div className="font-semibold">• Applications: <span className="font-bold text-purple-900">{wizardData.applications.join(', ')}</span></div>
+                      <div className="font-semibold">• Budget Range: <span className="font-bold text-purple-900">{wizardData.budgetRange.replace('under500k', 'Under $500K').replace('500k-2m', '$500K-$2M').replace('2m-10m', '$2M-$10M').replace('10m+', '$10M+').replace('flexible', 'Flexible')}</span></div>
+                      <div className="font-semibold">• System Size: <span className="font-bold text-purple-900">{wizardData.powerNeeds} ({wizardData.powerNeeds === 'small' ? '< 2MW' : wizardData.powerNeeds === 'medium' ? '2-10MW' : '> 10MW'})</span></div>
+                      <div className="font-semibold">• Location: <span className="font-bold text-purple-900">{wizardData.location}</span></div>
+                      <div className="font-semibold">• Tariff Region: <span className="font-bold text-purple-900">{wizardData.worldRegion}</span></div>
+                      {wizardData.shippingLocation && <div className="font-semibold">• Shipping: <span className="font-bold text-purple-900">{wizardData.shippingLocation}</span></div>}
+                      {wizardData.primaryGoal && <div className="font-semibold">• Primary Goal: <span className="font-bold text-purple-900">{wizardData.primaryGoal.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}</span></div>}
                     </div>
                   </div>
 
