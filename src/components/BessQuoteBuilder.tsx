@@ -250,7 +250,6 @@ export default function BessQuoteBuilder() {
   const [magicalExport, setMagicalExport] = useState(false)
   const [showSmartWizard, setShowSmartWizard] = useState(false)
   const [wizardStep, setWizardStep] = useState(1)
-  const [testCounter, setTestCounter] = useState(0) // Simple test counter
   const [wizardData, setWizardData] = useState({
     applications: [] as string[], // Changed to array for multiple selections
     budgetRange: '',
@@ -961,17 +960,6 @@ export default function BessQuoteBuilder() {
           >
             🪄 Smart Wizard
           </button>
-          
-          {/* Simple test button right next to wizard button */}
-          <button
-            className="ml-4 px-4 py-2 bg-red-500 text-white rounded"
-            onClick={() => {
-              alert('Test button clicked!');
-              setTestCounter(testCounter + 1);
-            }}
-          >
-            TEST: {testCounter}
-          </button>
         </div>
         
         <div className="flex items-center space-x-2">
@@ -1395,15 +1383,6 @@ export default function BessQuoteBuilder() {
                 {/* Testing Status Panel */}
                 <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
                   <h4 className="font-semibold text-blue-800 mb-2">🧪 Testing Status</h4>
-                  <button 
-                    onClick={() => {
-                      alert('Testing panel button clicked!');
-                      setTestCounter(testCounter + 1);
-                    }}
-                    className="mb-3 px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600"
-                  >
-                    Test React Updates (Clicked: {testCounter} times)
-                  </button>
                   <div className="grid grid-cols-2 gap-4 text-sm text-blue-700">
                     <div>
                       <strong>Applications Selected:</strong>
@@ -1759,17 +1738,6 @@ export default function BessQuoteBuilder() {
                   </div>
 
                   <div className="flex justify-end space-x-3">
-                    {/* Test button to verify React is working */}
-                    <button
-                      type="button"
-                      className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600"
-                      onClick={() => {
-                        setTestCounter(testCounter + 1);
-                      }}
-                    >
-                      TEST ({testCounter})
-                    </button>
-
                     <button
                       type="button"
                       className="px-6 py-2 rounded-lg transition-colors font-bold cursor-pointer"
