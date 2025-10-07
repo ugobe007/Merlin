@@ -642,36 +642,30 @@ export default function BessQuoteBuilder() {
     
     // Check if user is logged in
     const token = localStorage.getItem('auth_token');
-    console.log('DEBUG: Token check:', token ? 'Token exists' : 'No token');
     if (!token) {
-      // User is not logged in - show custom save prompt modal
-      console.log('DEBUG: Showing save prompt modal for no token');
+      // Not logged in: show modal to log in or sign up
       setPendingSave(snap);
       setSavePromptData({ projectName: snap.name });
       setShowSavePrompt(true);
       return;
     }
-    
-    // User is logged in - try to save to portfolio
+
+    // Logged in: prompt to save to Portfolio
     const saveResult = await saveToPortfolio(snap);
-    
     switch (saveResult) {
       case 'success':
         setSavePromptData({ projectName: snap.name });
         setShowSaveSuccess(true);
         break;
       case 'auth-failed':
-        // Session expired - show custom modal
         setPendingSave(snap);
         setSavePromptData({ projectName: snap.name });
         setShowSessionExpired(true);
         break;
       case 'error':
-        console.log('DEBUG: Network/server error, showing error modal');
         setSavePromptData({ projectName: snap.name });
         setShowErrorModal(true);
         break;
-      // 'no-token' case shouldn't happen here since we check for token above
     }
   }
 
@@ -1473,10 +1467,10 @@ export default function BessQuoteBuilder() {
                   <span className="text-3xl">💾</span>
                 </div>
                 <h2 className="text-2xl font-bold text-gray-800 mb-2">
-                  Quote Saved Successfully!
+                  Save Your Quote
                 </h2>
                 <p className="text-gray-600">
-                  "{savePromptData.projectName}" is now saved on this device
+                  Log in or sign up to save your quote.
                 </p>
               </div>
             </div>
@@ -1484,9 +1478,12 @@ export default function BessQuoteBuilder() {
             {/* Content */}
             <div className="p-6">
               <div className="text-center mb-6">
-                <p className="text-lg text-gray-700 mb-6">
-                  🚀 <strong>Upgrade to Cloud Storage</strong> for premium features:
-                </p>
+                  <p className="text-lg text-gray-700 mb-2">
+                    <strong>To save your project to the cloud, please sign up or log in.</strong>
+                  </p>
+                  <p className="text-md text-gray-600 mb-6">
+                    🚀 <strong>Upgrade to Cloud Storage</strong> for premium features:
+                  </p>
                 
                 <div className="bg-gradient-to-br from-blue-50 to-purple-50 p-5 rounded-xl border border-blue-100 mb-6">
                   <div className="grid grid-cols-1 gap-3 text-sm">
@@ -1527,7 +1524,7 @@ export default function BessQuoteBuilder() {
                   className="w-full bg-gradient-to-r from-purple-600 to-blue-600 text-white px-6 py-4 rounded-xl font-semibold hover:from-purple-700 hover:to-blue-700 transition-all duration-200 flex items-center justify-center gap-3 shadow-lg hover:shadow-xl transform hover:scale-[1.02]"
                 >
                   <span className="text-xl">🚀</span>
-                  <span>Create Free Account & Save to Cloud</span>
+                  <span>Sign Up / Log In to Save to Cloud</span>
                 </button>
                 
                 <button
