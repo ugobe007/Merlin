@@ -939,7 +939,7 @@ export default function BessQuoteBuilder() {
             value={projectName}
             onChange={e => setProjectName(e.target.value)}
           />
-          <button className="bg-yellow-300 border border-yellow-400 rounded px-3 py-2 shadow-sm hover:bg-yellow-400 transition-colors font-semibold text-gray-800" onClick={handleSaveProject}>
+          <button className="bg-yellow-400 border border-yellow-500 rounded px-3 py-2 shadow-sm hover:bg-yellow-500 transition-colors font-semibold text-gray-800" onClick={handleSaveProject}>
             💾 Save Project
           </button>
           <button 
@@ -1209,7 +1209,7 @@ export default function BessQuoteBuilder() {
         <div className="mt-2">Grand CapEx (pre-warranty): <strong>{money(out.grandCapexBeforeWarranty)}</strong></div>
         <div>Grand CapEx (incl. warranty {inputs.warrantyYears}y{inputs.warrantyYears === 20 ? ' +10%' : ''}): <strong>{money(out.grandCapex)}</strong></div>
 
-        <div className="mt-2 bg-yellow-300 p-2 rounded-lg border border-yellow-400 shadow-sm">
+        <div className="mt-2 bg-yellow-400 p-2 rounded-lg border border-yellow-500 shadow-sm">
           <span className="font-semibold text-gray-800">💰 Annual Savings: <strong className="text-green-700">{money(out.annualSavings)}</strong></span>
         </div>
         <div>ROI (years): <strong>{out.roiYears ? out.roiYears.toFixed(2) : '—'}</strong></div>
