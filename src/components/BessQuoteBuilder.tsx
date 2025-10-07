@@ -71,6 +71,67 @@ const COUNTRY_TARIFF_LOOKUP: Record<string, number> = {
   'Other': 0.08,
 }
 
+// Special battery tariff lookup table (batteries have different tariffs, especially from China)
+const BATTERY_TARIFF_LOOKUP: Record<string, number> = {
+  // North America - Battery specific tariffs
+  'United States': 0.254,  // 25.4% AD/CVD duties on Chinese lithium-ion batteries
+  'Canada': 0.035,         // Slightly higher for batteries
+  'Mexico': 0.18,
+  
+  // Europe - Battery specific tariffs  
+  'Germany': 0.06,
+  'France': 0.06,
+  'United Kingdom': 0.08,
+  'Spain': 0.06,
+  'Italy': 0.06,
+  'Netherlands': 0.06,
+  'Poland': 0.06,
+  'Belgium': 0.06,
+  'Austria': 0.06,
+  'Switzerland': 0.05,
+  'Norway': 0.04,
+  'Sweden': 0.06,
+  'Denmark': 0.06,
+  'Finland': 0.06,
+  
+  // Asia-Pacific - Battery specific tariffs
+  'China': 0.00,           // No tariff on domestic Chinese batteries
+  'Japan': 0.10,
+  'South Korea': 0.12,
+  'Australia': 0.08,
+  'New Zealand': 0.06,
+  'Singapore': 0.04,
+  'Malaysia': 0.18,
+  'Thailand': 0.25,
+  'Vietnam': 0.22,
+  'Philippines': 0.15,
+  'Indonesia': 0.18,
+  'India': 0.25,           // High battery tariffs to protect domestic industry
+  'Taiwan': 0.10,
+  
+  // Middle East & Africa - Battery specific tariffs
+  'United Arab Emirates': 0.06,
+  'Saudi Arabia': 0.15,
+  'Israel': 0.10,
+  'South Africa': 0.18,
+  'Egypt': 0.22,
+  'Morocco': 0.18,
+  'Nigeria': 0.25,
+  'Kenya': 0.22,
+  
+  // Latin America - Battery specific tariffs
+  'Brazil': 0.22,
+  'Argentina': 0.18,
+  'Chile': 0.10,
+  'Colombia': 0.15,
+  'Peru': 0.12,
+  'Ecuador': 0.18,
+  'Uruguay': 0.12,
+  
+  // Other
+  'Other': 0.10,
+}
+
 type Inputs = {
   powerMW: number
   standbyHours: number
@@ -141,6 +202,11 @@ const DEFAULT_ASSUMPTIONS: Assumptions = {
 // Helper function to get tariff percentage by country name
 function getTariffByCountry(countryName: string): number {
   return COUNTRY_TARIFF_LOOKUP[countryName] || COUNTRY_TARIFF_LOOKUP['Other']
+}
+
+// Helper function to get battery-specific tariff percentage by country name
+function getBatteryTariffByCountry(countryName: string): number {
+  return BATTERY_TARIFF_LOOKUP[countryName] || BATTERY_TARIFF_LOOKUP['Other']
 }
 
 export default function BessQuoteBuilder() {
@@ -251,9 +317,18 @@ export default function BessQuoteBuilder() {
     const solarSubtotal = (i.solarMWp ?? 0) * a.solarCostPerKWp * 1000
     const windSubtotal = (i.windMW ?? 0) * a.windCostPerKW * 1000
 
-    const tariffPct = getTariffByCountry(a.country)
-    const tariffBase = bessCapex + solarSubtotal + windSubtotal
-    const tariffs = tariffBase * tariffPct
+    // Apply different tariffs for batteries vs other components
+    const batteryTariffPct = getBatteryTariffByCountry(a.country)
+    const generalTariffPct = getTariffByCountry(a.country)
+    
+    const batteryTariffs = batterySubtotal * batteryTariffPct
+    const pcsTariffs = pcsSubtotal * generalTariffPct
+    const bosTariffs = bos * generalTariffPct
+    const epcTariffs = epc * generalTariffPct
+    const solarTariffs = solarSubtotal * generalTariffPct
+    const windTariffs = windSubtotal * generalTariffPct
+    
+    const tariffs = batteryTariffs + pcsTariffs + bosTariffs + epcTariffs + solarTariffs + windTariffs
 
     const grandCapexBeforeWarranty = bessCapex + genSubtotal + solarSubtotal + windSubtotal + tariffs
     const warrantyUplift = i.warrantyYears === 20 ? 1.10 : 1.0
@@ -1038,7 +1113,11 @@ export default function BessQuoteBuilder() {
             {/* Country Selector for Tariff Lookup */}
             <div className="col-span-2">
               <label className="block text-sm font-medium mb-1">
-                Country (for tariff lookup): <span className="text-blue-600 font-semibold">{(getTariffByCountry(assm.country) * 100).toFixed(1)}%</span>
+                Country (for tariff lookup): 
+                <span className="text-blue-600 font-semibold ml-2">
+                  Battery: {(getBatteryTariffByCountry(assm.country) * 100).toFixed(1)}% | 
+                  Other: {(getTariffByCountry(assm.country) * 100).toFixed(1)}%
+                </span>
               </label>
               <select 
                 className="w-full border rounded px-3 py-2 bg-white" 
@@ -1047,7 +1126,7 @@ export default function BessQuoteBuilder() {
               >
                 {Object.keys(COUNTRY_TARIFF_LOOKUP).map(country => (
                   <option key={country} value={country}>
-                    {country} ({(COUNTRY_TARIFF_LOOKUP[country] * 100).toFixed(1)}%)
+                    {country} (Battery: {(BATTERY_TARIFF_LOOKUP[country] * 100).toFixed(1)}% | Other: {(COUNTRY_TARIFF_LOOKUP[country] * 100).toFixed(1)}%)
                   </option>
                 ))}
               </select>
@@ -1096,7 +1175,9 @@ export default function BessQuoteBuilder() {
         <div>Generator Subtotal: <strong>{money(out.genSubtotal)}</strong></div>
         <div>Solar Subtotal: <strong>{money(out.solarSubtotal)}</strong></div>
         <div>Wind Subtotal: <strong>{money(out.windSubtotal)}</strong></div>
-        <div>Tariffs ({pct(getTariffByCountry(assm.country))} on BESS+Solar+Wind): <strong>{money(out.tariffs)}</strong></div>
+        <div>Tariffs - Battery ({pct(getBatteryTariffByCountry(assm.country))}): <strong>{money(out.batterySubtotal * getBatteryTariffByCountry(assm.country))}</strong></div>
+        <div>Tariffs - Other ({pct(getTariffByCountry(assm.country))}): <strong>{money(out.tariffs - (out.batterySubtotal * getBatteryTariffByCountry(assm.country)))}</strong></div>
+        <div className="font-semibold">Total Tariffs: <strong>{money(out.tariffs)}</strong></div>
 
         <div className="mt-2">Grand CapEx (pre-warranty): <strong>{money(out.grandCapexBeforeWarranty)}</strong></div>
         <div>Grand CapEx (incl. warranty {inputs.warrantyYears}y{inputs.warrantyYears === 20 ? ' +10%' : ''}): <strong>{money(out.grandCapex)}</strong></div>
