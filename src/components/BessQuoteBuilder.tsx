@@ -1122,9 +1122,6 @@ export default function BessQuoteBuilder() {
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-2xl font-bold text-gray-800 flex items-center">
                 🪄 Smart BESS Wizard
-                <span className="ml-2 text-sm bg-red-500 text-white px-2 py-1 rounded">
-                  TESTING MODE - Apps: {wizardData.applications.length} | Clicks: {testCounter}
-                </span>
               </h2>
               <div className="flex space-x-2">
                 <button 
