@@ -56,7 +56,7 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, onLoadQuote 
 
   const API_BASE = process.env.NODE_ENV === 'development' 
     ? 'http://localhost:5001'
-    : '';
+    : 'https://merlin.fly.dev';
 
   const getAuthHeaders = (): Record<string, string> => {
     const token = localStorage.getItem('auth_token');
@@ -159,13 +159,18 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, onLoadQuote 
       setLoading(true);
       setError(null);
 
+      console.log('API_BASE:', API_BASE);
+      console.log('Registration attempt with data:', registerForm);
+
       const response = await fetch(`${API_BASE}/api/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(registerForm)
       });
 
+      console.log('Registration response status:', response.status);
       const data = await response.json();
+      console.log('Registration response data:', data);
 
       if (response.ok) {
         localStorage.setItem('auth_token', data.token);
@@ -184,6 +189,7 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, onLoadQuote 
         setError(data.error || 'Registration failed');
       }
     } catch (err) {
+      console.error('Registration error:', err);
       setError('Registration failed. Please try again.');
     } finally {
       setLoading(false);
