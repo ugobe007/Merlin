@@ -927,7 +927,9 @@ export default function BessQuoteBuilder() {
             value={projectName}
             onChange={e => setProjectName(e.target.value)}
           />
-          <button className="border rounded px-3 py-2" onClick={handleSaveProject}>Save Project</button>
+          <button className="bg-yellow-300 border border-yellow-400 rounded px-3 py-2 shadow-sm hover:bg-yellow-400 transition-colors font-semibold text-gray-800" onClick={handleSaveProject}>
+            💾 Save Project
+          </button>
           <button 
             className="border rounded px-3 py-2 bg-blue-50 hover:bg-blue-100" 
             onClick={async () => {
