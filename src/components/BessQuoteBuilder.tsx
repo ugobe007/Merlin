@@ -613,7 +613,7 @@ export default function BessQuoteBuilder() {
     }
   }
 
-  function handleSaveProject() {
+  async function handleSaveProject() {
     console.log('Save Project clicked!');
     console.log('Project name:', projectName);
     console.log('Current inputs:', inputs);
@@ -635,9 +635,18 @@ export default function BessQuoteBuilder() {
     setProjects(updatedProjects)
     
     // Also save to user's portfolio if logged in
-    saveToPortfolio(snap);
+    const portfolioSaved = await saveToPortfolio(snap);
     
-    alert(`Project "${snap.name}" saved successfully!`);
+    if (portfolioSaved) {
+      alert(`✅ Project "${snap.name}" saved successfully to your Portfolio!`);
+    } else {
+      const token = localStorage.getItem('auth_token');
+      if (token) {
+        alert(`⚠️ Project "${snap.name}" saved locally, but failed to save to Portfolio. Please check your connection.`);
+      } else {
+        alert(`💾 Project "${snap.name}" saved locally! Please log in to save to your Portfolio.`);
+      }
+    }
   }
 
   async function saveToPortfolio(projectData: any) {
@@ -671,11 +680,16 @@ export default function BessQuoteBuilder() {
 
       if (response.ok) {
         console.log('Project saved to portfolio successfully');
+        // Trigger portfolio refresh if it's open
+        window.dispatchEvent(new CustomEvent('portfolio-refresh'));
+        return true;
       } else {
         console.error('Failed to save to portfolio:', await response.text());
+        return false;
       }
     } catch (error) {
       console.error('Error saving to portfolio:', error);
+      return false;
     }
   }
 
@@ -1267,7 +1281,26 @@ export default function BessQuoteBuilder() {
       </div>
 
       {/* Export */}
-      <div className="flex gap-3">
+      <div className="flex gap-3 items-center">
+        {/* Export buttons - moved to the left and made prominent */}
+        <div className="flex gap-3 mr-6">
+          <button 
+            className="px-6 py-3 rounded-lg border-2 border-green-400 bg-green-50 text-green-800 font-bold hover:bg-green-100 hover:border-green-500 transition-all shadow-md disabled:opacity-60 disabled:cursor-not-allowed" 
+            disabled={busy==='word'} 
+            onClick={exportToWord}
+          >
+            {busy==='word' ? '🪄 Exporting…' : '📄 Export Word'}
+          </button>
+          <button 
+            className="px-6 py-3 rounded-lg border-2 border-blue-400 bg-blue-50 text-blue-800 font-bold hover:bg-blue-100 hover:border-blue-500 transition-all shadow-md disabled:opacity-60 disabled:cursor-not-allowed" 
+            disabled={busy==='excel'} 
+            onClick={exportToExcel}
+          >
+            {busy==='excel' ? '🪄 Exporting…' : '📊 Export Excel'}
+          </button>
+        </div>
+        
+        {/* Other buttons */}
         <button 
           className="px-4 py-2 rounded border bg-green-600 text-white hover:bg-green-700"
           onClick={() => setShowVendorManager(true)}
@@ -1302,12 +1335,6 @@ export default function BessQuoteBuilder() {
           }}
         >
           🔗 Test Backend
-        </button>
-        <button className="px-4 py-2 rounded border disabled:opacity-60" disabled={busy==='word'} onClick={exportToWord}>
-          {busy==='word' ? '🪄 Exporting…' : '🪄 Export Word'}
-        </button>
-        <button className="px-4 py-2 rounded border disabled:opacity-60" disabled={busy==='excel'} onClick={exportToExcel}>
-          {busy==='excel' ? '🪄 Exporting…' : '🪄 Export Excel'}
         </button>
       </div>
 

@@ -27,6 +27,18 @@ export default function Portfolio({ onClose, onLoadQuote }: PortfolioProps) {
 
   useEffect(() => {
     fetchQuotes();
+    
+    // Listen for portfolio refresh events
+    const handlePortfolioRefresh = () => {
+      console.log('Portfolio refresh event received');
+      fetchQuotes();
+    };
+    
+    window.addEventListener('portfolio-refresh', handlePortfolioRefresh);
+    
+    return () => {
+      window.removeEventListener('portfolio-refresh', handlePortfolioRefresh);
+    };
   }, []);
 
   const fetchQuotes = async () => {
