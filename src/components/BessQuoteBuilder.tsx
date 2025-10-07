@@ -1161,8 +1161,21 @@ export default function BessQuoteBuilder() {
         </>
       </div>
 
-      {/* Outputs */}
-      <div className="border rounded p-4 text-sm space-y-1">
+      {/* BESS Quote Draft */}
+      <div className="border rounded-lg p-4 text-sm space-y-1 bg-gradient-to-br from-gray-50 to-gray-100 border-gray-300 shadow-sm">
+        {/* Professional Header */}
+        <div className="flex items-center gap-3 mb-4 pb-3 border-b border-gray-300">
+          <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center shadow-sm">
+            <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+          </div>
+          <div>
+            <h3 className="font-bold text-lg text-gray-800">BESS QUOTE DRAFT</h3>
+            <p className="text-xs text-gray-600">Project Cost Breakdown & Analysis</p>
+          </div>
+        </div>
+        
         <div>Total MWh: <strong>{out.totalMWh.toFixed(2)}</strong></div>
         <div>PCS kW: <strong>{Math.round(out.pcsKW).toLocaleString()}</strong></div>
 
