@@ -79,20 +79,20 @@ const BATTERY_TARIFF_LOOKUP: Record<string, number> = {
   'Mexico': 0.18,
   
   // Europe - Battery specific tariffs  
-  'Germany': 0.06,
-  'France': 0.06,
-  'United Kingdom': 0.08,
-  'Spain': 0.06,
-  'Italy': 0.06,
-  'Netherlands': 0.06,
-  'Poland': 0.06,
-  'Belgium': 0.06,
-  'Austria': 0.06,
+  'Germany': 0.189,        // 18.9% AD duties on Chinese lithium-ion batteries
+  'France': 0.189,         // 18.9% AD duties on Chinese lithium-ion batteries
+  'United Kingdom': 0.206,  // 20.6% AD duties on Chinese lithium-ion batteries (post-Brexit alignment with trade policy)
+  'Spain': 0.189,          // 18.9% AD duties on Chinese lithium-ion batteries
+  'Italy': 0.189,          // 18.9% AD duties on Chinese lithium-ion batteries
+  'Netherlands': 0.189,    // 18.9% AD duties on Chinese lithium-ion batteries
+  'Poland': 0.189,         // 18.9% AD duties on Chinese lithium-ion batteries
+  'Belgium': 0.189,        // 18.9% AD duties on Chinese lithium-ion batteries
+  'Austria': 0.189,        // 18.9% AD duties on Chinese lithium-ion batteries
   'Switzerland': 0.05,
   'Norway': 0.04,
-  'Sweden': 0.06,
-  'Denmark': 0.06,
-  'Finland': 0.06,
+  'Sweden': 0.189,         // 18.9% AD duties on Chinese lithium-ion batteries
+  'Denmark': 0.189,        // 18.9% AD duties on Chinese lithium-ion batteries
+  'Finland': 0.189,        // 18.9% AD duties on Chinese lithium-ion batteries
   
   // Asia-Pacific - Battery specific tariffs
   'China': 0.00,           // No tariff on domestic Chinese batteries
