@@ -4,7 +4,7 @@ const jwt = require('jsonwebtoken');
 const router = express.Router();
 
 const JWT_SECRET = process.env.JWT_SECRET || 'merlin-bess-secret-key-change-in-production';
-const JWT_EXPIRES_IN = '7d';
+// Removed JWT_EXPIRES_IN - sessions persist until logout
 
 // Middleware to verify JWT token
 function authenticateToken(req, res, next) {
@@ -57,11 +57,10 @@ router.post('/register', async (req, res) => {
 
     const user = req.db.createUser(userData);
 
-    // Generate JWT token
+    // Generate JWT token (no expiration - persists until logout)
     const token = jwt.sign(
       { userId: user.id, email: user.email },
-      JWT_SECRET,
-      { expiresIn: JWT_EXPIRES_IN }
+      JWT_SECRET
     );
 
     res.status(201).json({
@@ -97,11 +96,10 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ error: 'Invalid email or password' });
     }
 
-    // Generate JWT token
+    // Generate JWT token (no expiration - persists until logout)
     const token = jwt.sign(
       { userId: user.id, email: user.email },
-      JWT_SECRET,
-      { expiresIn: JWT_EXPIRES_IN }
+      JWT_SECRET
     );
 
     // Remove password hash from response
@@ -298,6 +296,13 @@ router.patch('/quotes/:id/favorite', authenticateToken, (req, res) => {
     console.error('Toggle favorite error:', error);
     res.status(500).json({ error: 'Failed to update favorite status' });
   }
+});
+
+// Logout endpoint (for completeness - with persistent tokens, client just removes localStorage)
+router.post('/logout', authenticateToken, (req, res) => {
+  // Since we're using persistent JWT tokens without a blacklist system,
+  // logout is handled client-side by removing the token from localStorage
+  res.json({ message: 'Logged out successfully' });
 });
 
 module.exports = { router, authenticateToken };

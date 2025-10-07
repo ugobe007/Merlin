@@ -114,13 +114,13 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, onLoadQuote 
           localStorage.removeItem('auth_token');
           setIsLoggedIn(false);
           setUser(null);
-          throw new Error('Session expired. Please log in again.');
+          throw new Error('Authentication failed. Please log in again.');
         } else if (response.status === 403) {
           // Invalid token
           localStorage.removeItem('auth_token');
           setIsLoggedIn(false);
           setUser(null);
-          throw new Error('Session expired. Please log in again.');
+          throw new Error('Authentication failed. Please log in again.');
         }
         throw new Error(`Failed to load profile: ${response.status}`);
       }
@@ -286,14 +286,31 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, onLoadQuote 
     }
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem('auth_token');
-    setIsLoggedIn(false);
-    setUser(null);
-    setQuotes([]);
-    setActiveTab('profile');
-    setError(null);
-    setShowRegister(false);
+  const handleLogout = async () => {
+    try {
+      // Call logout endpoint for completeness (optional since tokens are persistent)
+      const token = localStorage.getItem('auth_token');
+      if (token) {
+        await fetch('/api/auth/logout', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        });
+      }
+    } catch (error) {
+      console.log('Logout endpoint call failed (non-critical):', error);
+    } finally {
+      // Always clear local state regardless of backend call result
+      localStorage.removeItem('auth_token');
+      setIsLoggedIn(false);
+      setUser(null);
+      setQuotes([]);
+      setActiveTab('profile');
+      setError(null);
+      setShowRegister(false);
+    }
   };
 
   const handleClose = () => {
