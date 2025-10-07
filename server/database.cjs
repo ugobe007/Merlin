@@ -36,12 +36,17 @@ class QuoteDatabase {
         last_name TEXT,
         company TEXT,
         phone TEXT,
+        title TEXT,
+        linkedin TEXT,
         role TEXT DEFAULT 'user',
         is_active BOOLEAN DEFAULT 1,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
       )
     `);
+
+    // Add new columns if they don't exist (migration)
+    this.migrateUserTable();
 
     // User quotes table
     this.db.exec(`
@@ -207,6 +212,26 @@ class QuoteDatabase {
 
     // Insert default categories
     this.insertDefaultData();
+  }
+
+  migrateUserTable() {
+    // Check if title column exists
+    const titleExists = this.db.prepare("PRAGMA table_info(users)").all()
+      .some(column => column.name === 'title');
+    
+    if (!titleExists) {
+      this.db.exec('ALTER TABLE users ADD COLUMN title TEXT');
+      console.log('[database] Added title column to users table');
+    }
+
+    // Check if linkedin column exists
+    const linkedinExists = this.db.prepare("PRAGMA table_info(users)").all()
+      .some(column => column.name === 'linkedin');
+    
+    if (!linkedinExists) {
+      this.db.exec('ALTER TABLE users ADD COLUMN linkedin TEXT');
+      console.log('[database] Added linkedin column to users table');
+    }
   }
 
   insertDefaultData() {
@@ -548,8 +573,8 @@ class QuoteDatabase {
     const now = new Date().toISOString();
     
     const stmt = this.db.prepare(`
-      INSERT INTO users (id, email, password_hash, first_name, last_name, company, phone, role, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO users (id, email, password_hash, first_name, last_name, company, phone, title, linkedin, role, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
     
     stmt.run(
@@ -560,6 +585,8 @@ class QuoteDatabase {
       userData.last_name || null,
       userData.company || null,
       userData.phone || null,
+      userData.title || null,
+      userData.linkedin || null,
       userData.role || 'user',
       now,
       now
@@ -587,7 +614,7 @@ class QuoteDatabase {
     const fields = [];
     const values = [];
     
-    ['first_name', 'last_name', 'company', 'phone'].forEach(field => {
+    ['first_name', 'last_name', 'company', 'phone', 'title', 'linkedin'].forEach(field => {
       if (userData[field] !== undefined) {
         fields.push(`${field} = ?`);
         values.push(userData[field]);

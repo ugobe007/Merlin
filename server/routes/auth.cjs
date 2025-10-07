@@ -27,7 +27,7 @@ function authenticateToken(req, res, next) {
 // Register new user
 router.post('/register', async (req, res) => {
   try {
-    const { email, password, first_name, last_name, company, phone } = req.body;
+    const { email, password, first_name, last_name, company, phone, title, linkedin } = req.body;
 
     // Validate required fields
     if (!email || !password) {
@@ -50,7 +50,9 @@ router.post('/register', async (req, res) => {
       first_name,
       last_name,
       company,
-      phone
+      phone,
+      title,
+      linkedin
     };
 
     const user = req.db.createUser(userData);
@@ -135,13 +137,15 @@ router.get('/profile', authenticateToken, (req, res) => {
 // Update user profile
 router.put('/profile', authenticateToken, (req, res) => {
   try {
-    const { first_name, last_name, company, phone } = req.body;
+    const { first_name, last_name, company, phone, title, linkedin } = req.body;
     
     const updated = req.db.updateUser(req.user.userId, {
       first_name,
       last_name,
       company,
-      phone
+      phone,
+      title,
+      linkedin
     });
 
     if (!updated) {

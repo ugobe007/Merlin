@@ -8,6 +8,8 @@ interface User {
   last_name?: string;
   company?: string;
   phone?: string;
+  title?: string;
+  linkedin?: string;
   created_at: string;
 }
 
@@ -44,14 +46,18 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, onLoadQuote 
     first_name: '',
     last_name: '',
     company: '',
-    phone: ''
+    phone: '',
+    title: '',
+    linkedin: ''
   });
   const [showRegister, setShowRegister] = useState(false);
   const [profileForm, setProfileForm] = useState({
     first_name: '',
     last_name: '',
     company: '',
-    phone: ''
+    phone: '',
+    title: '',
+    linkedin: ''
   });
 
   // In production, use relative URLs since frontend and backend are on same domain
@@ -59,11 +65,6 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, onLoadQuote 
   const API_BASE = window.location.hostname === 'localhost' 
     ? 'http://localhost:5001'
     : '';
-    
-  console.log('API_BASE Configuration Debug:');
-  console.log('- window.location.hostname:', window.location.hostname);
-  console.log('- window.location.href:', window.location.href);
-  console.log('- API_BASE calculated as:', API_BASE);
 
   const getAuthHeaders = (): Record<string, string> => {
     const token = localStorage.getItem('auth_token');
@@ -96,7 +97,9 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, onLoadQuote 
           first_name: data.user.first_name || '',
           last_name: data.user.last_name || '',
           company: data.user.company || '',
-          phone: data.user.phone || ''
+          phone: data.user.phone || '',
+          title: data.user.title || '',
+          linkedin: data.user.linkedin || ''
         });
       } else {
         throw new Error('Failed to fetch profile');
@@ -165,24 +168,14 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, onLoadQuote 
     try {
       setLoading(true);
       setError(null);
-
-      console.log('=== REGISTRATION DEBUG START ===');
-      console.log('Environment NODE_ENV:', process.env.NODE_ENV);
-      console.log('API_BASE:', API_BASE);
-      console.log('Registration form data:', registerForm);
       
       // Validate required fields
       if (!registerForm.email || !registerForm.password) {
-        console.log('Validation failed: Missing email or password');
         setError('Email and password are required');
         return;
       }
 
-      const requestUrl = `${API_BASE}/api/auth/register`;
-      console.log('Request URL:', requestUrl);
-      console.log('About to make fetch request...');
-
-      const response = await fetch(requestUrl, {
+      const response = await fetch(`${API_BASE}/api/auth/register`, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
@@ -191,20 +184,9 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, onLoadQuote 
         body: JSON.stringify(registerForm)
       });
 
-      console.log('Fetch completed. Response status:', response.status);
-      console.log('Response headers:', Object.fromEntries(response.headers.entries()));
-
-      let data;
-      try {
-        data = await response.json();
-        console.log('Response data parsed:', data);
-      } catch (parseError) {
-        console.error('Failed to parse response JSON:', parseError);
-        throw new Error('Invalid response from server');
-      }
+      const data = await response.json();
 
       if (response.ok) {
-        console.log('Registration successful!');
         localStorage.setItem('auth_token', data.token);
         setIsLoggedIn(true);
         setUser(data.user);
@@ -214,13 +196,12 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, onLoadQuote 
           first_name: '',
           last_name: '',
           company: '',
-          phone: ''
+          phone: '',
+          title: '',
+          linkedin: ''
         });
         setShowRegister(false);
-        console.log('Registration process completed successfully');
       } else {
-        console.log('Registration failed with status:', response.status);
-        console.log('Error from server:', data.error);
         setError(data.error || 'Registration failed');
       }
     } catch (err) {
@@ -376,33 +357,6 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, onLoadQuote 
               <>
                 <h3 className="text-lg font-semibold">Create Account</h3>
                 
-                {/* DEBUG: Test Registration Button */}
-                <div className="mb-4 p-3 bg-yellow-100 border border-yellow-300 rounded">
-                  <p className="text-sm text-yellow-800 mb-2">Debug: Test Registration</p>
-                  <button
-                    type="button"
-                    onClick={async () => {
-                      const testData = {
-                        email: `test${Date.now()}@example.com`,
-                        password: 'test123456',
-                        first_name: 'Test',
-                        last_name: 'User',
-                        company: '',
-                        phone: ''
-                      };
-                      setRegisterForm(testData);
-                      console.log('Test registration triggered with:', testData);
-                      
-                      // Simulate form submission
-                      const fakeEvent = { preventDefault: () => {} } as React.FormEvent;
-                      await handleRegister(fakeEvent);
-                    }}
-                    className="bg-yellow-600 text-white px-3 py-1 rounded text-sm hover:bg-yellow-700"
-                  >
-                    Test Register Now
-                  </button>
-                </div>
-
                 <form onSubmit={handleRegister} className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
@@ -462,6 +416,26 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, onLoadQuote 
                     className="w-full border border-gray-300 rounded px-3 py-2"
                   />
                 </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Title/Position</label>
+                  <input
+                    type="text"
+                    value={registerForm.title}
+                    onChange={(e) => setRegisterForm({...registerForm, title: e.target.value})}
+                    placeholder="e.g., Project Manager, Engineer, Director"
+                    className="w-full border border-gray-300 rounded px-3 py-2"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">LinkedIn Profile</label>
+                  <input
+                    type="url"
+                    value={registerForm.linkedin}
+                    onChange={(e) => setRegisterForm({...registerForm, linkedin: e.target.value})}
+                    placeholder="https://linkedin.com/in/yourprofile"
+                    className="w-full border border-gray-300 rounded px-3 py-2"
+                  />
+                </div>
                 <button
                   type="submit"
                   disabled={loading}
@@ -514,7 +488,48 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, onLoadQuote 
             </div>
 
             {activeTab === 'profile' && (
-              <form onSubmit={handleUpdateProfile} className="space-y-4">
+              <div>
+                {/* User Info Display */}
+                <div className="bg-gray-50 rounded-lg p-4 mb-6">
+                  <h3 className="text-lg font-semibold mb-3">Current Profile Information</h3>
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <span className="font-medium text-gray-600">Name:</span>
+                      <p>{user?.first_name && user?.last_name 
+                        ? `${user.first_name} ${user.last_name}` 
+                        : 'Not provided'}</p>
+                    </div>
+                    <div>
+                      <span className="font-medium text-gray-600">Email:</span>
+                      <p>{user?.email}</p>
+                    </div>
+                    <div>
+                      <span className="font-medium text-gray-600">Company:</span>
+                      <p>{user?.company || 'Not provided'}</p>
+                    </div>
+                    <div>
+                      <span className="font-medium text-gray-600">Phone:</span>
+                      <p>{user?.phone || 'Not provided'}</p>
+                    </div>
+                    <div>
+                      <span className="font-medium text-gray-600">Title:</span>
+                      <p>{user?.title || 'Not provided'}</p>
+                    </div>
+                    <div>
+                      <span className="font-medium text-gray-600">LinkedIn:</span>
+                      <p>{user?.linkedin ? (
+                        <a href={user.linkedin} target="_blank" rel="noopener noreferrer" 
+                           className="text-blue-600 hover:underline">
+                          View Profile
+                        </a>
+                      ) : 'Not provided'}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Update Profile Form */}
+                <h3 className="text-lg font-semibold mb-4">Update Profile</h3>
+                <form onSubmit={handleUpdateProfile} className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium mb-1">First Name</label>
@@ -562,6 +577,26 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, onLoadQuote 
                     className="w-full border border-gray-300 rounded px-3 py-2"
                   />
                 </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Title/Position</label>
+                  <input
+                    type="text"
+                    value={profileForm.title}
+                    onChange={(e) => setProfileForm({...profileForm, title: e.target.value})}
+                    placeholder="e.g., Project Manager, Engineer, Director"
+                    className="w-full border border-gray-300 rounded px-3 py-2"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">LinkedIn Profile</label>
+                  <input
+                    type="url"
+                    value={profileForm.linkedin}
+                    onChange={(e) => setProfileForm({...profileForm, linkedin: e.target.value})}
+                    placeholder="https://linkedin.com/in/yourprofile"
+                    className="w-full border border-gray-300 rounded px-3 py-2"
+                  />
+                </div>
                 <button
                   type="submit"
                   disabled={loading}
@@ -571,6 +606,7 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, onLoadQuote 
                   {loading ? 'Updating...' : 'Update Profile'}
                 </button>
               </form>
+              </div>
             )}
 
             {activeTab === 'quotes' && (
