@@ -136,7 +136,8 @@ router.get('/profile', authenticateToken, (req, res) => {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    res.json({ user });
+    // Return user data directly (not wrapped in { user })
+    res.json(user);
   } catch (error) {
     console.error('Profile fetch error:', error);
     res.status(500).json({ error: 'Failed to fetch profile' });
