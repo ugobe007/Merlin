@@ -1054,7 +1054,7 @@ export default function BessQuoteBuilder() {
             Load Project
           </button>
           <button 
-            className="border rounded px-3 py-2 bg-yellow-400 border-yellow-500 text-gray-800 hover:bg-yellow-500 transition-all shadow-sm font-bold"
+            className="bg-yellow-400 border border-yellow-500 rounded px-3 py-2 shadow-sm hover:bg-yellow-500 transition-colors font-semibold text-gray-800"
             onClick={() => {
               const token = localStorage.getItem('auth_token');
               if (!token) {
