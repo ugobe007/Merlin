@@ -248,6 +248,7 @@ export default function BessQuoteBuilder() {
   const [showPortfolio, setShowPortfolio] = useState(false)
   const [currentPrice, setCurrentPrice] = useState<number | null>(0.12)
   const [magicalExport, setMagicalExport] = useState(false)
+  const [pendingSave, setPendingSave] = useState<any>(null) // Store quote data pending save after login
   const [showSmartWizard, setShowSmartWizard] = useState(false)
   const [wizardStep, setWizardStep] = useState(1)
   const [wizardData, setWizardData] = useState({
@@ -634,18 +635,37 @@ export default function BessQuoteBuilder() {
     console.log('Updated projects after save:', updatedProjects);
     setProjects(updatedProjects)
     
-    // Also save to user's portfolio if logged in
+    // Check if user is logged in
+    const token = localStorage.getItem('auth_token');
+    if (!token) {
+      // User is not logged in - prompt them to sign up/log in
+      const userChoice = confirm(
+        `💾 "${snap.name}" saved locally!\n\n` +
+        `🔐 Create an account or log in to:\n` +
+        `• Save quotes permanently to your Portfolio\n` +
+        `• Access quotes from any device\n` +
+        `• Export professional quotes with your company branding\n\n` +
+        `Click "OK" to sign up/log in, or "Cancel" to continue with local save only.`
+      );
+      
+      if (userChoice) {
+        // Store the quote data for saving after login
+        setPendingSave(snap);
+        // Open the user profile modal for login/signup
+        setShowUserProfile(true);
+      }
+      return;
+    }
+    
+    // User is logged in - try to save to portfolio
     const portfolioSaved = await saveToPortfolio(snap);
     
     if (portfolioSaved) {
       alert(`✅ Project "${snap.name}" saved successfully to your Portfolio!`);
     } else {
-      const token = localStorage.getItem('auth_token');
-      if (token) {
-        alert(`⚠️ Project "${snap.name}" saved locally, but failed to save to Portfolio. Please check your connection.`);
-      } else {
-        alert(`💾 Project "${snap.name}" saved locally! Please log in to save to your Portfolio.`);
-      }
+      // Token exists but save failed - this will be handled by saveToPortfolio function
+      // which will clear the token if it's expired and show appropriate message
+      alert(`⚠️ Project "${snap.name}" saved locally, but failed to save to Portfolio. Please check your connection and try logging in again.`);
     }
   }
 
@@ -654,7 +674,7 @@ export default function BessQuoteBuilder() {
       const token = localStorage.getItem('auth_token');
       if (!token) {
         console.log('No auth token - saving to localStorage only');
-        return;
+        return false;
       }
 
       // Calculate outputs for the portfolio
@@ -684,13 +704,40 @@ export default function BessQuoteBuilder() {
         window.dispatchEvent(new CustomEvent('portfolio-refresh'));
         return true;
       } else {
-        console.error('Failed to save to portfolio:', await response.text());
+        const errorText = await response.text();
+        console.error('Failed to save to portfolio:', errorText);
+        
+        // Handle authentication errors specifically
+        if (response.status === 401 || response.status === 403) {
+          console.log('Authentication failed - clearing invalid token');
+          localStorage.removeItem('auth_token');
+          // Show a more specific error message
+          alert('⚠️ Your session has expired. Please log in again to save to Portfolio.');
+          return false;
+        }
+        
         return false;
       }
     } catch (error) {
       console.error('Error saving to portfolio:', error);
       return false;
     }
+  }
+
+  async function savePendingQuoteAfterLogin() {
+    if (!pendingSave) return;
+    
+    console.log('Attempting to save pending quote after login:', pendingSave);
+    const portfolioSaved = await saveToPortfolio(pendingSave);
+    
+    if (portfolioSaved) {
+      alert(`🎉 Welcome! Your quote "${pendingSave.name}" has been saved to your Portfolio!`);
+    } else {
+      alert(`⚠️ Welcome! Your quote "${pendingSave.name}" is saved locally, but we couldn't save it to your Portfolio. Please try again.`);
+    }
+    
+    // Clear the pending save
+    setPendingSave(null);
   }
 
   function handleLoadFromPortfolio(quote: any) {
@@ -1379,6 +1426,10 @@ export default function BessQuoteBuilder() {
         onOpenPortfolio={() => {
           setShowUserProfile(false);
           setShowPortfolio(true);
+        }}
+        onLoginSuccess={() => {
+          // Save pending quote after successful login
+          savePendingQuoteAfterLogin();
         }}
       />
 

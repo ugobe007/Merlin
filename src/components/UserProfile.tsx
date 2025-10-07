@@ -31,9 +31,10 @@ interface UserProfileProps {
   onClose: () => void;
   onLoadQuote?: (quote: SavedQuote) => void;
   onOpenPortfolio?: () => void;
+  onLoginSuccess?: () => void;
 }
 
-const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, onLoadQuote, onOpenPortfolio }) => {
+const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, onLoadQuote, onOpenPortfolio, onLoginSuccess }) => {
   const [user, setUser] = useState<User | null>(null);
   const [quotes, setQuotes] = useState<SavedQuote[]>([]);
   const [loading, setLoading] = useState(false);
@@ -186,6 +187,11 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, onLoadQuote,
         setLoginForm({ email: '', password: '' });
         loadProfile();
         fetchQuotes();
+        
+        // Call the success callback if provided
+        if (onLoginSuccess) {
+          onLoginSuccess();
+        }
       } else {
         setError(data.error || 'Login failed');
       }
@@ -244,6 +250,11 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, onLoadQuote,
         setShowRegister(false);
         // Don't call loadProfile() since we already have the user data from registration
         fetchQuotes();
+        
+        // Call the success callback if provided
+        if (onLoginSuccess) {
+          onLoginSuccess();
+        }
       } else {
         setError(data.error || 'Registration failed');
       }

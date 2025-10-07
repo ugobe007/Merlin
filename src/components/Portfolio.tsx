@@ -59,7 +59,13 @@ export default function Portfolio({ onClose, onLoadQuote }: PortfolioProps) {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to fetch quotes');
+        if (response.status === 401 || response.status === 403) {
+          localStorage.removeItem('auth_token');
+          setError('Your session has expired. Please sign in again.');
+        } else {
+          setError('Failed to fetch quotes');
+        }
+        return;
       }
 
       const data = await response.json();
@@ -84,6 +90,11 @@ export default function Portfolio({ onClose, onLoadQuote }: PortfolioProps) {
       });
 
       if (!response.ok) {
+        if (response.status === 401 || response.status === 403) {
+          localStorage.removeItem('auth_token');
+          alert('Your session has expired. Please sign in again.');
+          return;
+        }
         throw new Error('Failed to delete quote');
       }
 
@@ -105,6 +116,11 @@ export default function Portfolio({ onClose, onLoadQuote }: PortfolioProps) {
       });
 
       if (!response.ok) {
+        if (response.status === 401 || response.status === 403) {
+          localStorage.removeItem('auth_token');
+          alert('Your session has expired. Please sign in again.');
+          return;
+        }
         throw new Error('Failed to update favorite');
       }
 
