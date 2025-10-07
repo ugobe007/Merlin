@@ -1225,8 +1225,6 @@ export default function BessQuoteBuilder() {
                                   : 'border-gray-200 hover:border-gray-300 bg-white hover:bg-gray-50'
                               }`}
                               onClick={() => {
-                                console.log('Clicked generation type:', type.value);
-                                console.log('Current wizardData:', wizardData);
                                 setWizardData({
                                   ...wizardData,
                                   hybridConfig: {
@@ -1280,29 +1278,6 @@ export default function BessQuoteBuilder() {
                     </div>
                   </div>
 
-                  {/* Debug Panel - Remove after testing */}
-                  <div className="bg-gray-100 p-3 rounded-lg border text-xs">
-                    <h4 className="font-bold mb-2">Debug Info:</h4>
-                    <div>Application: {wizardData.application || 'none'}</div>
-                    <div>BESS: {wizardData.equipmentNeeded.bess ? 'selected' : 'not selected'}</div>
-                    <div>Hybrid: {wizardData.equipmentNeeded.hybrid ? 'selected' : 'not selected'}</div>
-                    <div>Generation Type: {wizardData.hybridConfig.generationType}</div>
-                    <div>Generation MW: {wizardData.hybridConfig.generationMW}</div>
-                    <div>Storage MWh: {wizardData.hybridConfig.storageMWh}</div>
-                    <div>Hybrid Valid: {wizardData.equipmentNeeded.hybrid ? 
-                      (wizardData.hybridConfig.generationType && wizardData.hybridConfig.generationMW > 0 && wizardData.hybridConfig.storageMWh > 0).toString() : 
-                      'n/a'}</div>
-                    <div>Button Disabled: {(
-                      !wizardData.application || 
-                      (!wizardData.equipmentNeeded.bess && !wizardData.equipmentNeeded.hybrid) ||
-                      (wizardData.equipmentNeeded.hybrid && (
-                        !wizardData.hybridConfig.generationType || 
-                        wizardData.hybridConfig.generationMW === 0 || 
-                        wizardData.hybridConfig.storageMWh === 0
-                      ))
-                    ) ? 'true' : 'false'}</div>
-                  </div>
-
                   <div className="flex justify-end space-x-3">
                     <button
                       className="px-6 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors disabled:opacity-50"
@@ -1316,13 +1291,7 @@ export default function BessQuoteBuilder() {
                           wizardData.hybridConfig.storageMWh === 0
                         ))
                       }
-                      onClick={() => {
-                        console.log('Next button clicked');
-                        console.log('Application:', wizardData.application);
-                        console.log('BESS selected:', wizardData.equipmentNeeded.bess);
-                        console.log('Hybrid selected:', wizardData.equipmentNeeded.hybrid);
-                        setWizardStep(2);
-                      }}
+                      onClick={() => setWizardStep(2)}
                     >
                       Next Step →
                     </button>
