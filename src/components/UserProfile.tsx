@@ -97,6 +97,9 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, onLoadQuote 
       console.log(`EMERGENCY FETCH ATTEMPT ${debugTimestamp}`);
       console.log('Using hardcoded URL:', PROFILE_URL);
       
+      // FORCE VISIBILITY - This will definitely show up
+      alert(`DEBUG: About to fetch ${PROFILE_URL} with token: ${token ? 'EXISTS' : 'MISSING'}`);
+      
       const response = await fetch(PROFILE_URL, {
         headers: {
           'Content-Type': 'application/json',
@@ -105,6 +108,9 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, onLoadQuote 
       });
 
       console.log('Profile fetch response status:', response.status);
+      
+      // FORCE VISIBILITY - Show response status
+      alert(`DEBUG: Response status: ${response.status}`);
       
       if (response.ok) {
         const data = await response.json();
