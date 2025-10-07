@@ -60,19 +60,17 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, onLoadQuote 
     linkedin: ''
   });
 
-  // In production, use relative URLs since frontend and backend are on same domain
-  // In development, use full localhost URL
-  const API_BASE = window.location.hostname === 'localhost' 
-    ? 'http://localhost:5001'
-    : '';
-    
-  // Force debugging output to appear
-  console.log('=== API_BASE DEBUGGING ===');
+  // EMERGENCY FIX: Force cache bust and absolute URLs
+  const API_BASE = '';
+  const PROFILE_URL = 'https://merlin.fly.dev/api/auth/profile';
+  
+  // Force debugging output to appear with timestamp
+  const debugTimestamp = new Date().toISOString();
+  console.log(`=== PROFILE DEBUG ${debugTimestamp} ===`);
   console.log('window.location.hostname:', window.location.hostname);
   console.log('window.location.href:', window.location.href);
-  console.log('API_BASE calculated as:', API_BASE);
-  console.log('Full profile URL will be:', `${API_BASE}/api/auth/profile`);
-  console.log('========================');
+  console.log('EMERGENCY FIX: Using hardcoded URL:', PROFILE_URL);
+  console.log('===========================================');
 
   const getAuthHeaders = (): Record<string, string> => {
     const token = localStorage.getItem('auth_token');
@@ -96,14 +94,10 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, onLoadQuote 
       console.log('Fetching profile with token:', token ? 'Token exists' : 'No token');
       console.log('API_BASE:', API_BASE);
       
-      // TEMPORARY FIX: Use full URL for debugging
-      const profileUrl = window.location.hostname === 'localhost'
-        ? `${API_BASE}/api/auth/profile`
-        : 'https://merlin.fly.dev/api/auth/profile';
+      console.log(`EMERGENCY FETCH ATTEMPT ${debugTimestamp}`);
+      console.log('Using hardcoded URL:', PROFILE_URL);
       
-      console.log('Request URL:', profileUrl);
-      
-      const response = await fetch(profileUrl, {
+      const response = await fetch(PROFILE_URL, {
         headers: {
           'Content-Type': 'application/json',
           ...getAuthHeaders()
@@ -254,12 +248,8 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, onLoadQuote 
       setLoading(true);
       setError(null);
 
-      // TEMPORARY FIX: Use full URL for debugging
-      const profileUrl = window.location.hostname === 'localhost'
-        ? `${API_BASE}/api/auth/profile`
-        : 'https://merlin.fly.dev/api/auth/profile';
-
-      const response = await fetch(profileUrl, {
+      // EMERGENCY FIX: Use hardcoded URL
+      const response = await fetch(PROFILE_URL, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
