@@ -175,6 +175,7 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, onLoadQuote 
         setIsLoggedIn(true);
         setUser(data.user);
         setLoginForm({ email: '', password: '' });
+        loadProfile();
         fetchQuotes();
       } else {
         setError(data.error || 'Login failed');
@@ -224,6 +225,9 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, onLoadQuote 
           linkedin: ''
         });
         setShowRegister(false);
+        // Load profile data and quotes after successful registration
+        loadProfile();
+        fetchQuotes();
       } else {
         setError(data.error || 'Registration failed');
       }
@@ -273,6 +277,14 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, onLoadQuote 
     setUser(null);
     setQuotes([]);
     setActiveTab('profile');
+    setError(null);
+    setShowRegister(false);
+  };
+
+  const handleClose = () => {
+    setError(null);
+    setShowRegister(false);
+    onClose();
   };
 
   const deleteQuote = async (quoteId: string) => {
@@ -323,7 +335,7 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, onLoadQuote 
             <User className="mr-2" />
             {isLoggedIn ? 'User Profile' : 'Sign In'}
           </h2>
-          <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
+          <button onClick={handleClose} className="text-gray-500 hover:text-gray-700">
             <X size={24} />
           </button>
         </div>
