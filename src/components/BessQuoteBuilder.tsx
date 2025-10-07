@@ -933,7 +933,7 @@ export default function BessQuoteBuilder() {
       </div>
 
       {/* Assumptions Panel */}
-      <div className="border rounded p-4 space-y-3">
+      <div className="border rounded p-4 space-y-3 bg-blue-50">
         <div className="font-semibold text-lg">Assumptions (editable / import overrides)</div>
 
         {assm.vendorName && (
