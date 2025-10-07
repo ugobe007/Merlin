@@ -572,12 +572,15 @@ class QuoteDatabase {
     const id = generateUUID();
     const now = new Date().toISOString();
     
+    console.log('[createUser] Creating user with ID:', id);
+    console.log('[createUser] User data:', JSON.stringify(userData, null, 2));
+    
     const stmt = this.db.prepare(`
       INSERT INTO users (id, email, password_hash, first_name, last_name, company, phone, title, linkedin, role, created_at, updated_at)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
     
-    stmt.run(
+    const result = stmt.run(
       id,
       userData.email,
       userData.password_hash,
@@ -592,13 +595,19 @@ class QuoteDatabase {
       now
     );
     
-    return this.getUserById(id);
+    console.log('[createUser] Insert result:', result);
+    const createdUser = this.getUserById(id);
+    console.log('[createUser] Verification - user created successfully:', createdUser ? 'Yes' : 'No');
+    return createdUser;
   }
 
   getUserById(id) {
+    console.log('[getUserById] Looking for user with ID:', id);
     const stmt = this.db.prepare('SELECT * FROM users WHERE id = ? AND is_active = 1');
     const user = stmt.get(id);
+    console.log('[getUserById] Query result:', user ? 'User found' : 'User not found');
     if (user) {
+      console.log('[getUserById] User data:', JSON.stringify(user, null, 2));
       delete user.password_hash; // Never return password hash
     }
     return user;
