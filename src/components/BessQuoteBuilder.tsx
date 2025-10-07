@@ -613,14 +613,26 @@ export default function BessQuoteBuilder() {
   }
 
   function handleSaveProject() {
+    console.log('Save Project clicked!');
+    console.log('Project name:', projectName);
+    console.log('Current inputs:', inputs);
+    console.log('Current assumptions:', assm);
+    
     const snap = {
       name: projectName || `Quote ${new Date().toLocaleString()}`,
       createdAt: new Date().toISOString(),
       inputs,
       assumptions: assm,
     }
+    
+    console.log('Saving project snapshot:', snap);
     saveProject(snap)
-    setProjects(loadAll())
+    
+    const updatedProjects = loadAll();
+    console.log('Updated projects after save:', updatedProjects);
+    setProjects(updatedProjects)
+    
+    alert(`Project "${snap.name}" saved successfully!`);
   }
 
   function applyProject(p: any) {
