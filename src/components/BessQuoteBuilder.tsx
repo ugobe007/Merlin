@@ -116,8 +116,9 @@ export default function BessQuoteBuilder() {
   const [magicalExport, setMagicalExport] = useState(false)
   const [showSmartWizard, setShowSmartWizard] = useState(false)
   const [wizardStep, setWizardStep] = useState(1)
+  const [testCounter, setTestCounter] = useState(0) // Simple test counter
   const [wizardData, setWizardData] = useState({
-    application: '',
+    applications: [] as string[], // Changed to array for multiple selections
     budgetRange: '',
     powerNeeds: '',
     powerMW: 1,
@@ -143,6 +144,11 @@ export default function BessQuoteBuilder() {
     worldRegion: 'US' as Region, // for tariffs and shipping
     shippingLocation: ''
   })
+
+  // Enhanced debug logging function for thorough testing
+  const debugLog = (action: string, data?: any) => {
+    console.log(`🧪 TEST: ${action}`, data ? data : '');
+  }
 
   // persist inputs automatically
   useEffect(() => {
@@ -217,7 +223,9 @@ export default function BessQuoteBuilder() {
 
   // Smart Wizard Logic
   function generateSmartConfiguration() {
-    const { application, budgetRange, powerMW, equipmentNeeded, gridConnection, worldRegion } = wizardData
+    debugLog('🪄 generateSmartConfiguration called', wizardData);
+    
+    const { applications, budgetRange, powerMW, equipmentNeeded, gridConnection, worldRegion } = wizardData
     
     // Initialize configuration based on application type and user inputs
     let config: Partial<Inputs> = {
@@ -226,8 +234,9 @@ export default function BessQuoteBuilder() {
       powerMW: powerMW // Use the exact power specified by user
     }
 
-    // Determine specific settings based on application
-    switch (application) {
+    // Determine specific settings based on primary application
+    const primaryApplication = applications.length > 0 ? applications[0] : 'Custom Application'
+    switch (primaryApplication) {
       case 'EV Charging':
         config = {
           ...config,
@@ -358,20 +367,37 @@ export default function BessQuoteBuilder() {
 
     // Apply configuration
     const nextInputs = { ...inputs, ...config }
+    debugLog('Configuration applied', {
+      oldInputs: inputs,
+      config: config,
+      newInputs: nextInputs
+    });
     setInputs(nextInputs)
     setOut(calc(nextInputs, assm))
     
     // Set project name based on configuration
-    setProjectName(`${application} - ${config.powerMW}MW System`)
+    setProjectName(`${primaryApplication} - ${config.powerMW}MW System`)
     
-    // Close wizard
+    // Close wizard immediately - no need to wait
+    debugLog('Closing wizard and starting export');
     setShowSmartWizard(false)
     setWizardStep(1)
     
-    // Play magic sound and show feedback
+    // Play magic sound and show brief feedback
     playMagicWandSound()
     setMagicalExport(true)
-    setTimeout(() => setMagicalExport(false), 2000)
+    setTimeout(() => setMagicalExport(false), 1500) // Shorter animation
+    
+    // Start export immediately without waiting
+    setTimeout(() => {
+      console.log(`✨ BESS Configuration Generated! ✨`);
+      console.log(`Project: ${primaryApplication} - ${config.powerMW}MW System`);
+      console.log(`Total Cost: $${calc(nextInputs, assm).grandCapex.toLocaleString()}`);
+      console.log('Auto-exporting to Word...');
+      
+      // Automatically export to Word
+      exportToWord();
+    }, 500); // Just a brief delay to let the UI update
   }
 
   function applyOverrides(obj: any) {
@@ -497,22 +523,24 @@ export default function BessQuoteBuilder() {
       }
       
       console.log('Export Word payload:', payload); // Debug log
-      console.log('Outputs calculated:', currentOut); // Debug log
-      console.log('Inputs being sent:', inputs); // Debug log
-      console.log('Assumptions being sent:', assm); // Debug log
       
       // Determine API base URL dynamically
       const apiBase = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
         ? 'http://localhost:5001'
         : '';
       
-      console.log('API Base URL:', apiBase);
-      console.log('Current hostname:', window.location.hostname);
-      console.log('Full API URL:', `${apiBase}/api/export/word`);
+      // Silent export - no alert needed
+      console.log('🔄 Starting Word export...')
+      console.log('Attempting Word export to:', `${apiBase}/api/export/word`);
       
       // Add timeout and better error handling
       const controller = new AbortController()
-      const timeoutId = setTimeout(() => controller.abort(), 30000) // 30 second timeout
+      const timeoutId = setTimeout(() => {
+        controller.abort()
+        alert('❌ Export timed out after 8 seconds. Please try again.')
+      }, 8000) // 8 second timeout
+      
+      console.log('Sending request to:', `${apiBase}/api/export/word`);
       
       const res = await fetch(`${apiBase}/api/export/word`, {
         method: 'POST',
@@ -525,20 +553,42 @@ export default function BessQuoteBuilder() {
       
       clearTimeout(timeoutId)
       
+      console.log('Response received:', res.status, res.statusText);
+      
       if (!res.ok) {
         throw new Error(`Server error: ${res.status} ${res.statusText}`)
       }
       
+      console.log('Response OK, getting blob...');
+      
       // Force download
       const blob = await res.blob()
+      if (blob.size === 0) {
+        throw new Error('Received empty file from server')
+      }
+      
+      console.log('Received blob size:', blob.size, 'bytes');
+      
       const url = window.URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.style.display = 'none'
       a.href = url
       a.download = `${projectName}_BESS_Quote.docx`
+      
+      // Ensure the link is added to DOM before clicking
       document.body.appendChild(a)
+      console.log('Triggering download...');
       a.click()
-      window.URL.revokeObjectURL(url)
+      
+      // Clean up
+      setTimeout(() => {
+        document.body.removeChild(a)
+        window.URL.revokeObjectURL(url)
+      }, 100)
+      
+      // Silent success - no alert needed
+      console.log('✅ Word document downloaded successfully!')
+      console.log('Download completed');
       
       // Play magic wand sound on successful export
       playMagicWandSound()
@@ -554,7 +604,21 @@ export default function BessQuoteBuilder() {
         stack: error instanceof Error ? error.stack : undefined,
         type: typeof error
       });
-      alert(`Export failed: ${error instanceof Error ? error.message : 'Unknown error'}. Check console for details.`)
+      
+      let errorMessage = 'Export failed: ';
+      if (error instanceof Error) {
+        if (error.message.includes('fetch')) {
+          errorMessage += 'Cannot connect to server. Make sure the backend is running on port 5001.';
+        } else if (error.message.includes('abort')) {
+          errorMessage += 'Request timed out. Server may be slow or unresponsive.';
+        } else {
+          errorMessage += error.message;
+        }
+      } else {
+        errorMessage += 'Unknown error occurred.';
+      }
+      
+      alert(`❌ ${errorMessage}\n\nCheck browser console for details.`);
     } finally {
       setBusy('')
     }
@@ -676,6 +740,17 @@ export default function BessQuoteBuilder() {
             onClick={() => setShowSmartWizard(true)}
           >
             🪄 Smart Wizard
+          </button>
+          
+          {/* Simple test button right next to wizard button */}
+          <button
+            className="ml-4 px-4 py-2 bg-red-500 text-white rounded"
+            onClick={() => {
+              alert('Test button clicked!');
+              setTestCounter(testCounter + 1);
+            }}
+          >
+            TEST: {testCounter}
           </button>
         </div>
         
@@ -1047,13 +1122,29 @@ export default function BessQuoteBuilder() {
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-2xl font-bold text-gray-800 flex items-center">
                 🪄 Smart BESS Wizard
+                <span className="ml-2 text-sm bg-red-500 text-white px-2 py-1 rounded">
+                  TESTING MODE - Apps: {wizardData.applications.length} | Clicks: {testCounter}
+                </span>
               </h2>
-              <button 
-                className="text-gray-500 hover:text-gray-700 text-2xl"
-                onClick={() => {setShowSmartWizard(false); setWizardStep(1)}}
-              >
-                ×
-              </button>
+              <div className="flex space-x-2">
+                <button 
+                  className="px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors font-bold"
+                  style={{ 
+                    color: '#FDE047', 
+                    fontWeight: 'bold', 
+                    textShadow: '1px 1px 2px rgba(0,0,0,0.8)' 
+                  }}
+                  onClick={() => {setShowSmartWizard(false); setWizardStep(1)}}
+                >
+                  🏠 Home
+                </button>
+                <button 
+                  className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors font-bold"
+                  onClick={() => {setShowSmartWizard(false); setWizardStep(1)}}
+                >
+                  ✕ Close
+                </button>
+              </div>
             </div>
 
             {wizardStep === 1 && (
@@ -1065,6 +1156,66 @@ export default function BessQuoteBuilder() {
                   <p className="text-gray-600">
                     Tell us about your power needs and what equipment you require.
                   </p>
+                </div>
+
+                {/* Testing Status Panel */}
+                <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                  <h4 className="font-semibold text-blue-800 mb-2">🧪 Testing Status</h4>
+                  <button 
+                    onClick={() => {
+                      alert('Testing panel button clicked!');
+                      setTestCounter(testCounter + 1);
+                    }}
+                    className="mb-3 px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600"
+                  >
+                    Test React Updates (Clicked: {testCounter} times)
+                  </button>
+                  <div className="grid grid-cols-2 gap-4 text-sm text-blue-700">
+                    <div>
+                      <strong>Applications Selected:</strong>
+                      <div className="text-xs mt-1">
+                        {wizardData.applications.length > 0 
+                          ? wizardData.applications.map(app => (
+                              <div key={app} className="flex items-center">
+                                <span className="text-green-600 mr-1">✓</span>
+                                {app}
+                              </div>
+                            ))
+                          : <div className="text-red-600">❌ None selected</div>
+                        }
+                      </div>
+                    </div>
+                    <div>
+                      <strong>Equipment Selected:</strong>
+                      <div className="text-xs mt-1">
+                        {Object.entries(wizardData.equipmentNeeded)
+                          .filter(([_, selected]) => selected)
+                          .map(([key, _]) => (
+                            <div key={key} className="flex items-center">
+                              <span className="text-green-600 mr-1">✓</span>
+                              {key.toUpperCase()}
+                            </div>
+                          ))
+                        }
+                        {Object.entries(wizardData.equipmentNeeded).filter(([_, selected]) => selected).length === 0 && (
+                          <div className="text-red-600">❌ None selected</div>
+                        )}
+                      </div>
+                    </div>
+                    <div>
+                      <strong>Next Button Status:</strong>
+                      <div className="text-xs mt-1">
+                        {wizardData.applications.length === 0 
+                          ? '🔴 DISABLED (Need to select application)' 
+                          : '✅ ENABLED'
+                        }
+                      </div>
+                    </div>
+                    <div>
+                      <strong>Wizard Step:</strong>
+                      <div className="text-xs mt-1">Step {wizardStep} of 3</div>
+                    </div>
+                  </div>
                 </div>
 
                 <div className="space-y-6">
@@ -1138,25 +1289,41 @@ export default function BessQuoteBuilder() {
                               : 'border-gray-200 hover:border-green-300 bg-white hover:bg-green-50 hover:shadow-md'
                           }`}
                           onClick={() => {
+                            debugLog('Equipment button clicked', equipment.key);
                             const newEquipmentState = {
                               ...wizardData.equipmentNeeded,
                               [equipment.key]: !wizardData.equipmentNeeded[equipment.key as keyof typeof wizardData.equipmentNeeded]
                             };
+                            debugLog('Equipment state changing from/to', {
+                              from: wizardData.equipmentNeeded,
+                              to: newEquipmentState
+                            });
                             setWizardData({
                               ...wizardData, 
                               equipmentNeeded: newEquipmentState
                             });
                           }}
                         >
-                          <div className="flex items-center space-x-2">
-                            <span className="text-xl">{equipment.icon}</span>
-                            <div className="flex-1">
-                              <div className="font-medium text-sm">{equipment.label}</div>
-                              <div className="text-xs text-gray-600">{equipment.desc}</div>
+                          <div className="relative">
+                            {/* Checkbox indicator */}
+                            <div className="absolute -top-1 -left-1 w-6 h-6 border-2 border-gray-400 bg-white rounded flex items-center justify-center shadow-lg z-10">
+                              {wizardData.equipmentNeeded[equipment.key as keyof typeof wizardData.equipmentNeeded] ? (
+                                <span className="text-green-600 text-lg font-bold">✓</span>
+                              ) : (
+                                <span className="text-gray-300"></span>
+                              )}
                             </div>
-                            {wizardData.equipmentNeeded[equipment.key as keyof typeof wizardData.equipmentNeeded] && (
-                              <span className="text-lg text-green-700">✓</span>
-                            )}
+                            
+                            <div className="flex items-center space-x-2">
+                              <span className="text-xl">{equipment.icon}</span>
+                              <div className="flex-1">
+                                <div className="font-medium text-sm">{equipment.label}</div>
+                                <div className="text-xs text-gray-600">{equipment.desc}</div>
+                                <div className="text-xs text-blue-600">
+                                  Status: {wizardData.equipmentNeeded[equipment.key as keyof typeof wizardData.equipmentNeeded] ? 'SELECTED' : 'NOT SELECTED'}
+                                </div>
+                              </div>
+                            </div>
                           </div>
                         </button>
                       ))}
@@ -1279,23 +1446,42 @@ export default function BessQuoteBuilder() {
                           key={app.value}
                           type="button"
                           className={`p-3 rounded-lg border-2 text-left transition-all cursor-pointer transform ${
-                            wizardData.application === app.value
+                            wizardData.applications.includes(app.value)
                               ? 'border-purple-600 bg-purple-200 text-purple-900 font-bold shadow-lg scale-105 ring-2 ring-purple-300'
                               : 'border-gray-200 hover:border-purple-300 hover:bg-purple-50 hover:shadow-md'
                           }`}
                           onClick={() => {
-                            setWizardData({...wizardData, application: app.value});
+                            debugLog('Application button clicked', app.value);
+                            const newApplications = wizardData.applications.includes(app.value)
+                              ? wizardData.applications.filter(a => a !== app.value) // Remove if already selected
+                              : [...wizardData.applications, app.value]; // Add if not selected
+                            debugLog('Applications changing from/to', {
+                              from: wizardData.applications,
+                              to: newApplications
+                            });
+                            setWizardData({...wizardData, applications: newApplications});
                           }}
                         >
-                          <div className="flex items-center space-x-2">
-                            <span className="text-xl">{app.icon}</span>
-                            <div className="flex-1">
-                              <div className="font-medium">{app.value}</div>
-                              <div className="text-sm text-gray-600">{app.desc}</div>
+                          <div className="relative">
+                            {/* Checkbox indicator */}
+                            <div className="absolute -top-1 -left-1 w-6 h-6 border-2 border-gray-400 bg-white rounded flex items-center justify-center shadow-lg z-10">
+                              {wizardData.applications.includes(app.value) ? (
+                                <span className="text-green-600 text-lg font-bold">✓</span>
+                              ) : (
+                                <span className="text-gray-300"></span>
+                              )}
                             </div>
-                            {wizardData.application === app.value && (
-                              <span className="text-lg text-purple-700">✓</span>
-                            )}
+                            
+                            <div className="flex items-center space-x-2">
+                              <span className="text-xl">{app.icon}</span>
+                              <div className="flex-1">
+                                <div className="font-medium">{app.value}</div>
+                                <div className="text-sm text-gray-600">{app.desc}</div>
+                                <div className="text-xs text-blue-600">
+                                  Status: {wizardData.applications.includes(app.value) ? 'SELECTED' : 'NOT SELECTED'}
+                                </div>
+                              </div>
+                            </div>
                           </div>
                         </button>
                       ))}
@@ -1317,7 +1503,7 @@ export default function BessQuoteBuilder() {
                       </div>
                       <div>
                         <strong>Configuration:</strong>
-                        <div>Application: {wizardData.application || '❌ None'}</div>
+                        <div>Applications: {wizardData.applications.length > 0 ? wizardData.applications.join(', ') : '❌ None'}</div>
                         <div>Power MW: {wizardData.powerMW}</div>
                         <div>Grid: {wizardData.gridConnection}</div>
                         <div>Gen Type: {wizardData.hybridConfig.generationType}</div>
@@ -1327,7 +1513,7 @@ export default function BessQuoteBuilder() {
                     </div>
                     <div className="mt-2 text-xs">
                       <strong>Next Button Status:</strong> {(
-                        !wizardData.application || 
+                        wizardData.applications.length === 0 || 
                         (!wizardData.equipmentNeeded.bess && !wizardData.equipmentNeeded.hybrid) ||
                         (wizardData.equipmentNeeded.hybrid && (
                           !wizardData.hybridConfig.generationType || 
@@ -1339,24 +1525,49 @@ export default function BessQuoteBuilder() {
                   </div>
 
                   <div className="flex justify-end space-x-3">
+                    {/* Test button to verify React is working */}
                     <button
                       type="button"
-                      className="px-6 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors disabled:opacity-50 cursor-pointer"
-                      style={{ color: '#FDE047', fontWeight: 'bold', textShadow: '1px 1px 2px rgba(0,0,0,0.8)' }}
-                      disabled={
-                        !wizardData.application || 
-                        (!wizardData.equipmentNeeded.bess && !wizardData.equipmentNeeded.hybrid) ||
-                        (wizardData.equipmentNeeded.hybrid && (
-                          !wizardData.hybridConfig.generationType || 
-                          wizardData.hybridConfig.generationMW === 0 || 
-                          wizardData.hybridConfig.storageMWh === 0
-                        ))
-                      }
+                      className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600"
                       onClick={() => {
-                        setWizardStep(2);
+                        setTestCounter(testCounter + 1);
                       }}
                     >
-                      Next Step →
+                      TEST ({testCounter})
+                    </button>
+
+                    <button
+                      type="button"
+                      className="px-6 py-2 rounded-lg transition-colors font-bold cursor-pointer"
+                      style={{ 
+                        backgroundColor: '#8B5CF6',
+                        color: '#FDE047', 
+                        fontWeight: 'bold', 
+                        textShadow: '1px 1px 2px rgba(0,0,0,0.8)',
+                        border: 'none'
+                      }}
+                      onMouseEnter={(e) => (e.target as HTMLButtonElement).style.backgroundColor = '#7C3AED'}
+                      onMouseLeave={(e) => (e.target as HTMLButtonElement).style.backgroundColor = '#8B5CF6'}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        
+                        console.log('NEXT BUTTON CLICKED');
+                        console.log('Applications selected:', wizardData.applications);
+                        console.log('Current step:', wizardStep);
+                        
+                        // Temporarily remove the restriction for testing
+                        // if (wizardData.applications.length === 0) {
+                        //   alert('Please select at least one application first!');
+                        //   return;
+                        // }
+                        
+                        console.log('Moving to step 2...');
+                        setWizardStep(2);
+                        console.log('Step should now be:', 2);
+                      }}
+                    >
+                      Next Step → (Apps: {wizardData.applications.length})
                     </button>
                   </div>
                 </div>
@@ -1505,8 +1716,16 @@ export default function BessQuoteBuilder() {
                       ← Back
                     </button>
                     <button
-                      className="px-6 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors disabled:opacity-50"
-                      style={{ color: '#FDE047', fontWeight: 'bold', textShadow: '1px 1px 2px rgba(0,0,0,0.8)' }}
+                      className="px-6 py-2 rounded-lg transition-colors disabled:opacity-50 font-bold"
+                      style={{ 
+                        backgroundColor: '#8B5CF6',
+                        color: '#FDE047', 
+                        fontWeight: 'bold', 
+                        textShadow: '1px 1px 2px rgba(0,0,0,0.8)',
+                        border: 'none'
+                      }}
+                      onMouseEnter={(e) => !e.currentTarget.disabled && ((e.target as HTMLButtonElement).style.backgroundColor = '#7C3AED')}
+                      onMouseLeave={(e) => !e.currentTarget.disabled && ((e.target as HTMLButtonElement).style.backgroundColor = '#8B5CF6')}
                       disabled={!wizardData.budgetRange || !wizardData.powerNeeds}
                       onClick={() => setWizardStep(3)}
                     >
@@ -1602,7 +1821,7 @@ export default function BessQuoteBuilder() {
                       {wizardData.equipmentNeeded.hybrid && (
                         <div>• Hybrid Config: {wizardData.hybridConfig.generationMW}MW generation + {wizardData.hybridConfig.storageMWh}MWh storage ({wizardData.hybridConfig.generationType})</div>
                       )}
-                      <div>• Application: {wizardData.application}</div>
+                      <div>• Applications: {wizardData.applications.join(', ')}</div>
                       <div>• Budget Range: {wizardData.budgetRange.replace('under500k', 'Under $500K').replace('500k-2m', '$500K-$2M').replace('2m-10m', '$2M-$10M').replace('10m+', '$10M+').replace('flexible', 'Flexible')}</div>
                       <div>• System Size: {wizardData.powerNeeds} ({wizardData.powerNeeds === 'small' ? '< 2MW' : wizardData.powerNeeds === 'medium' ? '2-10MW' : '> 10MW'})</div>
                       <div>• Location: {wizardData.location}</div>
@@ -1620,8 +1839,16 @@ export default function BessQuoteBuilder() {
                       ← Back
                     </button>
                     <button
-                      className="px-8 py-3 bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-lg hover:from-purple-600 hover:to-purple-700 transition-all font-medium shadow-lg transform hover:scale-105"
-                      style={{ color: '#FDE047', fontWeight: 'bold', textShadow: '1px 1px 2px rgba(0,0,0,0.8)' }}
+                      className="px-8 py-3 rounded-lg transition-all font-bold shadow-lg transform hover:scale-105"
+                      style={{ 
+                        background: 'linear-gradient(to right, #8B5CF6, #7C3AED)',
+                        color: '#FDE047', 
+                        fontWeight: 'bold', 
+                        textShadow: '1px 1px 2px rgba(0,0,0,0.8)',
+                        border: 'none'
+                      }}
+                      onMouseEnter={(e) => (e.target as HTMLButtonElement).style.background = 'linear-gradient(to right, #7C3AED, #6D28D9)'}
+                      onMouseLeave={(e) => (e.target as HTMLButtonElement).style.background = 'linear-gradient(to right, #8B5CF6, #7C3AED)'}
                       onClick={generateSmartConfiguration}
                     >
                       🪄 Generate My BESS Configuration

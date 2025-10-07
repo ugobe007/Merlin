@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Simple Button Test</title>
+    <script src="https://unpkg.com/react@19/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@19/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+</head>
+<body>
+    <div id="root"></div>
+    
+    <script type="text/babel">
+        function TestApp() {
+            const [count, setCount] = React.useState(0);
+            const [selected, setSelected] = React.useState(false);
+            
+            return (
+                <div style={{padding: '20px'}}>
+                    <h1>Simple Test</h1>
+                    <button 
+                        onClick={() => setCount(count + 1)}
+                        style={{padding: '10px', margin: '10px', backgroundColor: 'blue', color: 'white'}}
+                    >
+                        Clicked {count} times
+                    </button>
+                    
+                    <div style={{position: 'relative', margin: '20px'}}>
+                        <button 
+                            onClick={() => setSelected(!selected)}
+                            style={{
+                                padding: '20px', 
+                                border: selected ? '3px solid green' : '3px solid gray',
+                                backgroundColor: selected ? 'lightgreen' : 'white'
+                            }}
+                        >
+                            <div style={{position: 'relative'}}>
+                                {selected && (
+                                    <div style={{
+                                        position: 'absolute',
+                                        top: '-10px',
+                                        left: '-10px',
+                                        width: '30px',
+                                        height: '30px',
+                                        backgroundColor: 'red',
+                                        borderRadius: '50%',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        color: 'white',
+                                        fontWeight: 'bold'
+                                    }}>
+                                        ✓
+                                    </div>
+                                )}
+                                Test Button - Status: {selected ? 'SELECTED' : 'NOT SELECTED'}
+                            </div>
+                        </button>
+                    </div>
+                </div>
+            );
+        }
+        
+        ReactDOM.render(<TestApp />, document.getElementById('root'));
+    </script>
+</body>
+</html>
