@@ -1132,10 +1132,10 @@ export default function BessQuoteBuilder() {
                         <button
                           key={equipment.key}
                           type="button"
-                          className={`p-3 rounded-lg border-2 text-left transition-all cursor-pointer ${
+                          className={`p-3 rounded-lg border-2 text-left transition-all cursor-pointer transform ${
                             wizardData.equipmentNeeded[equipment.key as keyof typeof wizardData.equipmentNeeded]
-                              ? 'border-green-500 bg-green-100 text-green-800'
-                              : 'border-gray-200 hover:border-gray-300 bg-white hover:bg-gray-50'
+                              ? 'border-green-600 bg-green-200 text-green-900 shadow-lg scale-105 ring-2 ring-green-300'
+                              : 'border-gray-200 hover:border-green-300 bg-white hover:bg-green-50 hover:shadow-md'
                           }`}
                           onClick={(e) => {
                             e.preventDefault();
@@ -1152,10 +1152,13 @@ export default function BessQuoteBuilder() {
                         >
                           <div className="flex items-center space-x-2">
                             <span className="text-xl">{equipment.icon}</span>
-                            <div>
+                            <div className="flex-1">
                               <div className="font-medium text-sm">{equipment.label}</div>
                               <div className="text-xs text-gray-600">{equipment.desc}</div>
                             </div>
+                            {wizardData.equipmentNeeded[equipment.key as keyof typeof wizardData.equipmentNeeded] && (
+                              <span className="text-lg text-green-700">✓</span>
+                            )}
                           </div>
                         </button>
                       ))}
@@ -1226,10 +1229,10 @@ export default function BessQuoteBuilder() {
                             <button
                               key={type.value}
                               type="button"
-                              className={`p-2 rounded-lg border-2 text-left transition-all cursor-pointer ${
+                              className={`p-2 rounded-lg border-2 text-left transition-all cursor-pointer transform ${
                                 wizardData.hybridConfig.generationType === type.value
-                                  ? 'border-orange-500 bg-orange-100 text-orange-800 shadow-md'
-                                  : 'border-gray-200 hover:border-gray-300 bg-white hover:bg-gray-50'
+                                  ? 'border-orange-600 bg-orange-200 text-orange-900 shadow-lg scale-105 ring-2 ring-orange-300'
+                                  : 'border-gray-200 hover:border-orange-300 bg-white hover:bg-orange-50 hover:shadow-md'
                               }`}
                               onClick={(e) => {
                                 e.preventDefault();
@@ -1244,8 +1247,15 @@ export default function BessQuoteBuilder() {
                                 });
                               }}
                             >
-                              <span className="text-lg mr-2">{type.icon}</span>
-                              <span className="text-sm font-medium">{type.label}</span>
+                              <div className="flex items-center justify-between w-full">
+                                <div className="flex items-center">
+                                  <span className="text-lg mr-2">{type.icon}</span>
+                                  <span className="text-sm font-medium">{type.label}</span>
+                                </div>
+                                {wizardData.hybridConfig.generationType === type.value && (
+                                  <span className="text-sm text-orange-700">✓</span>
+                                )}
+                              </div>
                             </button>
                           ))}
                         </div>
@@ -1270,10 +1280,10 @@ export default function BessQuoteBuilder() {
                         <button
                           key={app.value}
                           type="button"
-                          className={`p-3 rounded-lg border-2 text-left transition-all cursor-pointer ${
+                          className={`p-3 rounded-lg border-2 text-left transition-all cursor-pointer transform ${
                             wizardData.application === app.value
-                              ? 'border-purple-500 bg-purple-50 text-purple-800'
-                              : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                              ? 'border-purple-600 bg-purple-200 text-purple-900 shadow-lg scale-105 ring-2 ring-purple-300'
+                              : 'border-gray-200 hover:border-purple-300 hover:bg-purple-50 hover:shadow-md'
                           }`}
                           onClick={(e) => {
                             e.preventDefault();
@@ -1284,10 +1294,13 @@ export default function BessQuoteBuilder() {
                         >
                           <div className="flex items-center space-x-2">
                             <span className="text-xl">{app.icon}</span>
-                            <div>
+                            <div className="flex-1">
                               <div className="font-medium">{app.value}</div>
                               <div className="text-sm text-gray-600">{app.desc}</div>
                             </div>
+                            {wizardData.application === app.value && (
+                              <span className="text-lg text-purple-700">✓</span>
+                            )}
                           </div>
                         </button>
                       ))}
@@ -1384,15 +1397,23 @@ export default function BessQuoteBuilder() {
                       ].map((budget) => (
                         <button
                           key={budget.value}
-                          className={`p-3 rounded-lg border-2 text-left transition-all ${
+                          type="button"
+                          className={`p-3 rounded-lg border-2 text-left transition-all cursor-pointer transform ${
                             wizardData.budgetRange === budget.value
-                              ? 'border-purple-500 bg-purple-50 text-purple-800'
-                              : 'border-gray-200 hover:border-gray-300'
+                              ? 'border-purple-600 bg-purple-200 text-purple-900 shadow-lg scale-105 ring-2 ring-purple-300'
+                              : 'border-gray-200 hover:border-purple-300 hover:bg-purple-50 hover:shadow-md'
                           }`}
                           onClick={() => setWizardData({...wizardData, budgetRange: budget.value})}
                         >
-                          <div className="font-medium">{budget.label}</div>
-                          <div className="text-sm text-gray-600">{budget.desc}</div>
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <div className="font-medium">{budget.label}</div>
+                              <div className="text-sm text-gray-600">{budget.desc}</div>
+                            </div>
+                            {wizardData.budgetRange === budget.value && (
+                              <span className="text-lg text-purple-700">✓</span>
+                            )}
+                          </div>
                         </button>
                       ))}
                     </div>
@@ -1410,15 +1431,19 @@ export default function BessQuoteBuilder() {
                       ].map((size) => (
                         <button
                           key={size.value}
-                          className={`p-3 rounded-lg border-2 text-center transition-all ${
+                          type="button"
+                          className={`p-3 rounded-lg border-2 text-center transition-all cursor-pointer transform ${
                             wizardData.powerNeeds === size.value
-                              ? 'border-purple-500 bg-purple-50 text-purple-800'
-                              : 'border-gray-200 hover:border-gray-300'
+                              ? 'border-purple-600 bg-purple-200 text-purple-900 shadow-lg scale-105 ring-2 ring-purple-300'
+                              : 'border-gray-200 hover:border-purple-300 hover:bg-purple-50 hover:shadow-md'
                           }`}
                           onClick={() => setWizardData({...wizardData, powerNeeds: size.value})}
                         >
                           <div className="font-medium">{size.label}</div>
                           <div className="text-sm text-gray-600">{size.desc}</div>
+                          {wizardData.powerNeeds === size.value && (
+                            <div className="text-lg text-purple-700 mt-1">✓</div>
+                          )}
                         </button>
                       ))}
                     </div>
@@ -1542,15 +1567,23 @@ export default function BessQuoteBuilder() {
                       ].map((goal) => (
                         <button
                           key={goal.value}
-                          className={`p-3 rounded-lg border-2 text-left transition-all ${
+                          type="button"
+                          className={`p-3 rounded-lg border-2 text-left transition-all cursor-pointer transform ${
                             wizardData.primaryGoal === goal.value
-                              ? 'border-purple-500 bg-purple-50 text-purple-800'
-                              : 'border-gray-200 hover:border-gray-300'
+                              ? 'border-blue-600 bg-blue-200 text-blue-900 shadow-lg scale-105 ring-2 ring-blue-300'
+                              : 'border-gray-200 hover:border-blue-300 hover:bg-blue-50 hover:shadow-md'
                           }`}
                           onClick={() => setWizardData({...wizardData, primaryGoal: goal.value})}
                         >
-                          <div className="font-medium">{goal.label}</div>
-                          <div className="text-sm text-gray-600">{goal.desc}</div>
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <div className="font-medium">{goal.label}</div>
+                              <div className="text-sm text-gray-600">{goal.desc}</div>
+                            </div>
+                            {wizardData.primaryGoal === goal.value && (
+                              <span className="text-lg text-blue-700">✓</span>
+                            )}
+                          </div>
                         </button>
                       ))}
                     </div>
