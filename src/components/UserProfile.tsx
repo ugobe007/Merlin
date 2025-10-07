@@ -159,20 +159,45 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, onLoadQuote 
       setLoading(true);
       setError(null);
 
+      console.log('=== REGISTRATION DEBUG START ===');
+      console.log('Environment NODE_ENV:', process.env.NODE_ENV);
       console.log('API_BASE:', API_BASE);
-      console.log('Registration attempt with data:', registerForm);
+      console.log('Registration form data:', registerForm);
+      
+      // Validate required fields
+      if (!registerForm.email || !registerForm.password) {
+        console.log('Validation failed: Missing email or password');
+        setError('Email and password are required');
+        return;
+      }
 
-      const response = await fetch(`${API_BASE}/api/auth/register`, {
+      const requestUrl = `${API_BASE}/api/auth/register`;
+      console.log('Request URL:', requestUrl);
+      console.log('About to make fetch request...');
+
+      const response = await fetch(requestUrl, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
         body: JSON.stringify(registerForm)
       });
 
-      console.log('Registration response status:', response.status);
-      const data = await response.json();
-      console.log('Registration response data:', data);
+      console.log('Fetch completed. Response status:', response.status);
+      console.log('Response headers:', Object.fromEntries(response.headers.entries()));
+
+      let data;
+      try {
+        data = await response.json();
+        console.log('Response data parsed:', data);
+      } catch (parseError) {
+        console.error('Failed to parse response JSON:', parseError);
+        throw new Error('Invalid response from server');
+      }
 
       if (response.ok) {
+        console.log('Registration successful!');
         localStorage.setItem('auth_token', data.token);
         setIsLoggedIn(true);
         setUser(data.user);
@@ -185,14 +210,18 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, onLoadQuote 
           phone: ''
         });
         setShowRegister(false);
+        console.log('Registration process completed successfully');
       } else {
+        console.log('Registration failed with status:', response.status);
+        console.log('Error from server:', data.error);
         setError(data.error || 'Registration failed');
       }
     } catch (err) {
-      console.error('Registration error:', err);
-      setError('Registration failed. Please try again.');
+      console.error('Registration error (catch block):', err);
+      setError(`Registration failed: ${err instanceof Error ? err.message : 'Please try again'}`);
     } finally {
       setLoading(false);
+      console.log('=== REGISTRATION DEBUG END ===');
     }
   };
 
@@ -337,8 +366,37 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, onLoadQuote 
                 </p>
               </form>
             ) : (
-              <form onSubmit={handleRegister} className="space-y-4">
+              <>
                 <h3 className="text-lg font-semibold">Create Account</h3>
+                
+                {/* DEBUG: Test Registration Button */}
+                <div className="mb-4 p-3 bg-yellow-100 border border-yellow-300 rounded">
+                  <p className="text-sm text-yellow-800 mb-2">Debug: Test Registration</p>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      const testData = {
+                        email: `test${Date.now()}@example.com`,
+                        password: 'test123456',
+                        first_name: 'Test',
+                        last_name: 'User',
+                        company: '',
+                        phone: ''
+                      };
+                      setRegisterForm(testData);
+                      console.log('Test registration triggered with:', testData);
+                      
+                      // Simulate form submission
+                      const fakeEvent = { preventDefault: () => {} } as React.FormEvent;
+                      await handleRegister(fakeEvent);
+                    }}
+                    className="bg-yellow-600 text-white px-3 py-1 rounded text-sm hover:bg-yellow-700"
+                  >
+                    Test Register Now
+                  </button>
+                </div>
+
+                <form onSubmit={handleRegister} className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium mb-1">First Name</label>
@@ -415,6 +473,7 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, onLoadQuote 
                   </button>
                 </p>
               </form>
+              </>
             )}
           </div>
         ) : (
