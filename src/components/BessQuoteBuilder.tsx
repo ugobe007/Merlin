@@ -1134,19 +1134,17 @@ export default function BessQuoteBuilder() {
                           type="button"
                           className={`p-3 rounded-lg border-2 text-left transition-all cursor-pointer transform ${
                             wizardData.equipmentNeeded[equipment.key as keyof typeof wizardData.equipmentNeeded]
-                              ? 'border-green-600 bg-green-200 text-green-900 shadow-lg scale-105 ring-2 ring-green-300'
+                              ? 'border-green-600 bg-green-200 text-green-900 font-bold shadow-lg scale-105 ring-2 ring-green-300'
                               : 'border-gray-200 hover:border-green-300 bg-white hover:bg-green-50 hover:shadow-md'
                           }`}
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            console.log('Equipment button clicked:', equipment.key);
+                          onClick={() => {
+                            const newEquipmentState = {
+                              ...wizardData.equipmentNeeded,
+                              [equipment.key]: !wizardData.equipmentNeeded[equipment.key as keyof typeof wizardData.equipmentNeeded]
+                            };
                             setWizardData({
                               ...wizardData, 
-                              equipmentNeeded: {
-                                ...wizardData.equipmentNeeded,
-                                [equipment.key]: !wizardData.equipmentNeeded[equipment.key as keyof typeof wizardData.equipmentNeeded]
-                              }
+                              equipmentNeeded: newEquipmentState
                             });
                           }}
                         >
@@ -1282,13 +1280,10 @@ export default function BessQuoteBuilder() {
                           type="button"
                           className={`p-3 rounded-lg border-2 text-left transition-all cursor-pointer transform ${
                             wizardData.application === app.value
-                              ? 'border-purple-600 bg-purple-200 text-purple-900 shadow-lg scale-105 ring-2 ring-purple-300'
+                              ? 'border-purple-600 bg-purple-200 text-purple-900 font-bold shadow-lg scale-105 ring-2 ring-purple-300'
                               : 'border-gray-200 hover:border-purple-300 hover:bg-purple-50 hover:shadow-md'
                           }`}
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            console.log('Application button clicked:', app.value);
+                          onClick={() => {
                             setWizardData({...wizardData, application: app.value});
                           }}
                         >
@@ -1357,10 +1352,7 @@ export default function BessQuoteBuilder() {
                           wizardData.hybridConfig.storageMWh === 0
                         ))
                       }
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        console.log('Next Step (1→2) button clicked, current state:', wizardData);
+                      onClick={() => {
                         setWizardStep(2);
                       }}
                     >
