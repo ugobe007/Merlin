@@ -10,6 +10,67 @@ import { playMagicWandSound } from '../utils/magicSound'
 
 type Region = 'US' | 'UK' | 'EU' | 'Other'
 
+// Comprehensive country-to-tariff lookup table
+const COUNTRY_TARIFF_LOOKUP: Record<string, number> = {
+  // North America
+  'United States': 0.02,
+  'Canada': 0.03,
+  'Mexico': 0.15,
+  
+  // Europe
+  'Germany': 0.05,
+  'France': 0.05,
+  'United Kingdom': 0.06,
+  'Spain': 0.05,
+  'Italy': 0.05,
+  'Netherlands': 0.05,
+  'Poland': 0.05,
+  'Belgium': 0.05,
+  'Austria': 0.05,
+  'Switzerland': 0.04,
+  'Norway': 0.03,
+  'Sweden': 0.05,
+  'Denmark': 0.05,
+  'Finland': 0.05,
+  
+  // Asia-Pacific
+  'China': 0.25,
+  'Japan': 0.08,
+  'South Korea': 0.10,
+  'Australia': 0.06,
+  'New Zealand': 0.05,
+  'Singapore': 0.03,
+  'Malaysia': 0.15,
+  'Thailand': 0.20,
+  'Vietnam': 0.18,
+  'Philippines': 0.12,
+  'Indonesia': 0.15,
+  'India': 0.20,
+  'Taiwan': 0.08,
+  
+  // Middle East & Africa
+  'United Arab Emirates': 0.05,
+  'Saudi Arabia': 0.12,
+  'Israel': 0.08,
+  'South Africa': 0.15,
+  'Egypt': 0.18,
+  'Morocco': 0.15,
+  'Nigeria': 0.20,
+  'Kenya': 0.18,
+  
+  // Latin America
+  'Brazil': 0.18,
+  'Argentina': 0.15,
+  'Chile': 0.08,
+  'Colombia': 0.12,
+  'Peru': 0.10,
+  'Ecuador': 0.15,
+  'Uruguay': 0.10,
+  
+  // Other
+  'Other': 0.08,
+}
+
 type Inputs = {
   powerMW: number
   standbyHours: number
@@ -39,7 +100,7 @@ type Assumptions = {
   genCostPerKW: number
   solarCostPerKWp: number
   windCostPerKW: number
-  tariffByRegion: Record<Region, number>
+  country: string  // Single country field instead of tariffByRegion
   vendorName?: string
   vendorFile?: string
   vendorDate?: string
@@ -74,7 +135,12 @@ const DEFAULT_ASSUMPTIONS: Assumptions = {
   genCostPerKW: 350,
   solarCostPerKWp: 900,
   windCostPerKW: 1400,
-  tariffByRegion: { US: 0.02, UK: 0.06, EU: 0.05, Other: 0.08 },
+  country: 'United States',  // Default country instead of tariffByRegion
+}
+
+// Helper function to get tariff percentage by country name
+function getTariffByCountry(countryName: string): number {
+  return COUNTRY_TARIFF_LOOKUP[countryName] || COUNTRY_TARIFF_LOOKUP['Other']
 }
 
 export default function BessQuoteBuilder() {
@@ -185,7 +251,7 @@ export default function BessQuoteBuilder() {
     const solarSubtotal = (i.solarMWp ?? 0) * a.solarCostPerKWp * 1000
     const windSubtotal = (i.windMW ?? 0) * a.windCostPerKW * 1000
 
-    const tariffPct = a.tariffByRegion[i.locationRegion] ?? 0
+    const tariffPct = getTariffByCountry(a.country)
     const tariffBase = bessCapex + solarSubtotal + windSubtotal
     const tariffs = tariffBase * tariffPct
 
@@ -403,8 +469,12 @@ export default function BessQuoteBuilder() {
   function applyOverrides(obj: any) {
     const next: Assumptions = JSON.parse(JSON.stringify(assm))
     for (const k of Object.keys(obj || {})) {
-      if (k === 'tariffByRegion' && typeof obj[k] === 'object') {
-        next.tariffByRegion = { ...next.tariffByRegion, ...obj[k] }
+      if (k === 'country' && typeof obj[k] === 'string') {
+        // Set country directly for tariff lookup
+        next.country = obj[k]
+      } else if (k === 'tariffByRegion') {
+        // Legacy support - ignore old tariffByRegion imports
+        console.log('Ignoring legacy tariffByRegion import - using country-based lookup instead')
       } else if (k in next) {
         const val = obj[k]
         if (typeof (next as any)[k] === 'number') {
@@ -964,14 +1034,24 @@ export default function BessQuoteBuilder() {
             <AssumptionNumber label="Gen $/kW" value={assm.genCostPerKW} onChange={v => updateAssumption('genCostPerKW', v)} />
             <AssumptionNumber label="Solar $/kWp" value={assm.solarCostPerKWp} onChange={v => updateAssumption('solarCostPerKWp', v)} />
             <AssumptionNumber label="Wind $/kW" value={assm.windCostPerKW} onChange={v => updateAssumption('windCostPerKW', v)} />
-            <AssumptionNumber label="Tariff US %" value={assm.tariffByRegion.US} step={0.01}
-              onChange={(v) => updateAssumption('tariffByRegion', { ...assm.tariffByRegion, US: v } as any)} />
-            <AssumptionNumber label="Tariff UK %" value={assm.tariffByRegion.UK} step={0.01}
-              onChange={(v) => updateAssumption('tariffByRegion', { ...assm.tariffByRegion, UK: v } as any)} />
-            <AssumptionNumber label="Tariff EU %" value={assm.tariffByRegion.EU} step={0.01}
-              onChange={(v) => updateAssumption('tariffByRegion', { ...assm.tariffByRegion, EU: v } as any)} />
-            <AssumptionNumber label="Tariff Other %" value={assm.tariffByRegion.Other} step={0.01}
-              onChange={(v) => updateAssumption('tariffByRegion', { ...assm.tariffByRegion, Other: v } as any)} />
+            
+            {/* Country Selector for Tariff Lookup */}
+            <div className="col-span-2">
+              <label className="block text-sm font-medium mb-1">
+                Country (for tariff lookup): <span className="text-blue-600 font-semibold">{(getTariffByCountry(assm.country) * 100).toFixed(1)}%</span>
+              </label>
+              <select 
+                className="w-full border rounded px-3 py-2 bg-white" 
+                value={assm.country}
+                onChange={(e) => updateAssumption('country', e.target.value)}
+              >
+                {Object.keys(COUNTRY_TARIFF_LOOKUP).map(country => (
+                  <option key={country} value={country}>
+                    {country} ({(COUNTRY_TARIFF_LOOKUP[country] * 100).toFixed(1)}%)
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
 
           <div className="flex flex-wrap gap-2 pt-2">
@@ -1016,7 +1096,7 @@ export default function BessQuoteBuilder() {
         <div>Generator Subtotal: <strong>{money(out.genSubtotal)}</strong></div>
         <div>Solar Subtotal: <strong>{money(out.solarSubtotal)}</strong></div>
         <div>Wind Subtotal: <strong>{money(out.windSubtotal)}</strong></div>
-        <div>Tariffs ({pct(assm.tariffByRegion[inputs.locationRegion])} on BESS+Solar+Wind): <strong>{money(out.tariffs)}</strong></div>
+        <div>Tariffs ({pct(getTariffByCountry(assm.country))} on BESS+Solar+Wind): <strong>{money(out.tariffs)}</strong></div>
 
         <div className="mt-2">Grand CapEx (pre-warranty): <strong>{money(out.grandCapexBeforeWarranty)}</strong></div>
         <div>Grand CapEx (incl. warranty {inputs.warrantyYears}y{inputs.warrantyYears === 20 ? ' +10%' : ''}): <strong>{money(out.grandCapex)}</strong></div>
