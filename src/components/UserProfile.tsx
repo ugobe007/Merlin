@@ -109,10 +109,18 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, onLoadQuote 
 
       if (!response.ok) {
         if (response.status === 404) {
-          // User not found in database - clear token and ask to register again
+          // User not found in database - only clear token if we're sure it's invalid
+          console.log('Profile 404 - user not found in database');
           localStorage.removeItem('auth_token');
           setIsLoggedIn(false);
-          throw new Error('User not found. Please register or log in again.');
+          setUser(null);
+          throw new Error('Session expired. Please log in again.');
+        } else if (response.status === 403) {
+          // Invalid token
+          localStorage.removeItem('auth_token');
+          setIsLoggedIn(false);
+          setUser(null);
+          throw new Error('Session expired. Please log in again.');
         }
         throw new Error(`Failed to load profile: ${response.status}`);
       }
@@ -214,6 +222,14 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, onLoadQuote 
         localStorage.setItem('auth_token', data.token);
         setIsLoggedIn(true);
         setUser(data.user);
+        setProfileForm({
+          first_name: data.user?.first_name || '',
+          last_name: data.user?.last_name || '',
+          company: data.user?.company || '',
+          phone: data.user?.phone || '',
+          title: data.user?.title || '',
+          linkedin: data.user?.linkedin || ''
+        });
         setRegisterForm({
           email: '',
           password: '',
@@ -225,8 +241,7 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, onLoadQuote 
           linkedin: ''
         });
         setShowRegister(false);
-        // Load profile data and quotes after successful registration
-        loadProfile();
+        // Don't call loadProfile() since we already have the user data from registration
         fetchQuotes();
       } else {
         setError(data.error || 'Registration failed');
