@@ -65,6 +65,14 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, onLoadQuote 
   const API_BASE = window.location.hostname === 'localhost' 
     ? 'http://localhost:5001'
     : '';
+    
+  // Force debugging output to appear
+  console.log('=== API_BASE DEBUGGING ===');
+  console.log('window.location.hostname:', window.location.hostname);
+  console.log('window.location.href:', window.location.href);
+  console.log('API_BASE calculated as:', API_BASE);
+  console.log('Full profile URL will be:', `${API_BASE}/api/auth/profile`);
+  console.log('========================');
 
   const getAuthHeaders = (): Record<string, string> => {
     const token = localStorage.getItem('auth_token');
@@ -87,9 +95,15 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, onLoadQuote 
       const token = localStorage.getItem('auth_token');
       console.log('Fetching profile with token:', token ? 'Token exists' : 'No token');
       console.log('API_BASE:', API_BASE);
-      console.log('Request URL:', `${API_BASE}/api/auth/profile`);
       
-      const response = await fetch(`${API_BASE}/api/auth/profile`, {
+      // TEMPORARY FIX: Use full URL for debugging
+      const profileUrl = window.location.hostname === 'localhost'
+        ? `${API_BASE}/api/auth/profile`
+        : 'https://merlin.fly.dev/api/auth/profile';
+      
+      console.log('Request URL:', profileUrl);
+      
+      const response = await fetch(profileUrl, {
         headers: {
           'Content-Type': 'application/json',
           ...getAuthHeaders()
@@ -240,7 +254,12 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, onLoadQuote 
       setLoading(true);
       setError(null);
 
-      const response = await fetch(`${API_BASE}/api/auth/profile`, {
+      // TEMPORARY FIX: Use full URL for debugging
+      const profileUrl = window.location.hostname === 'localhost'
+        ? `${API_BASE}/api/auth/profile`
+        : 'https://merlin.fly.dev/api/auth/profile';
+
+      const response = await fetch(profileUrl, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
