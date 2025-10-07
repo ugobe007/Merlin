@@ -54,9 +54,16 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, onLoadQuote 
     phone: ''
   });
 
-  const API_BASE = process.env.NODE_ENV === 'development' 
+  // In production, use relative URLs since frontend and backend are on same domain
+  // In development, use full localhost URL
+  const API_BASE = window.location.hostname === 'localhost' 
     ? 'http://localhost:5001'
-    : 'https://merlin.fly.dev';
+    : '';
+    
+  console.log('API_BASE Configuration Debug:');
+  console.log('- window.location.hostname:', window.location.hostname);
+  console.log('- window.location.href:', window.location.href);
+  console.log('- API_BASE calculated as:', API_BASE);
 
   const getAuthHeaders = (): Record<string, string> => {
     const token = localStorage.getItem('auth_token');
