@@ -1520,6 +1520,7 @@ export default function BessQuoteBuilder() {
                   onClick={() => {
                     setShowSavePrompt(false);
                     setShowUserProfile(true);
+                    window.dispatchEvent(new CustomEvent('signup-clicked'));
                   }}
                   className="w-full bg-gradient-to-r from-green-400 to-blue-500 text-white px-6 py-4 rounded-xl font-semibold hover:from-green-500 hover:to-blue-600 transition-all duration-200 flex items-center justify-center gap-3 shadow-lg hover:shadow-xl transform hover:scale-[1.02]"
                 >
@@ -1531,25 +1532,13 @@ export default function BessQuoteBuilder() {
                   onClick={() => {
                     setShowSavePrompt(false);
                     setShowUserProfile(true);
+                    window.dispatchEvent(new CustomEvent('login-clicked'));
                   }}
                   className="w-full bg-gradient-to-r from-purple-500 to-blue-600 text-white px-6 py-4 rounded-xl font-semibold hover:from-purple-600 hover:to-blue-700 transition-all duration-200 flex items-center justify-center gap-3 shadow-lg hover:shadow-xl transform hover:scale-[1.02]"
                 >
                   <span className="text-xl">🔑</span>
                   <span>Log In</span>
                 </button>
-
-                {localStorage.getItem('auth_token') && (
-                  <button
-                    onClick={() => {
-                      setShowSavePrompt(false);
-                      setShowPortfolio(true);
-                    }}
-                    className="w-full bg-gradient-to-r from-blue-400 to-purple-500 text-white px-6 py-4 rounded-xl font-semibold hover:from-blue-500 hover:to-purple-600 transition-all duration-200 flex items-center justify-center gap-3 shadow-lg hover:shadow-xl transform hover:scale-[1.02]"
-                  >
-                    <span className="text-xl">📁</span>
-                    <span>View My Portfolio</span>
-                  </button>
-                )}
               </div>
               
               <p className="text-xs text-gray-500 text-center mt-4 px-2">
@@ -1584,10 +1573,10 @@ export default function BessQuoteBuilder() {
               <div className="text-center mb-6">
                 <div className="bg-blue-50 p-4 rounded-xl border border-blue-200 mb-6">
                   <p className="text-gray-700 mb-2">
-                    <strong>📋 "{savePromptData.projectName}"</strong> is safely saved locally
+                    <strong>📋 "{savePromptData.projectName}"</strong>
                   </p>
                   <p className="text-sm text-gray-600">
-                    We couldn't save it to your Portfolio due to an expired session
+                    Please log in or sign up to save your quote.
                   </p>
                 </div>
                 
@@ -1721,7 +1710,7 @@ export default function BessQuoteBuilder() {
                     📋 "{savePromptData.projectName}"
                   </p>
                   <p className="text-sm text-gray-600">
-                    Saved locally, but couldn't sync to Portfolio
+                    Please log in or sign up to save your quote.
                   </p>
                 </div>
                 
