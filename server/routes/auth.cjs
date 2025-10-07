@@ -144,6 +144,16 @@ router.get('/profile', authenticateToken, (req, res) => {
   }
 });
 
+// Temporary debug endpoint
+router.get('/debug/users', (req, res) => {
+  try {
+    const users = req.db.db.prepare('SELECT id, email, first_name, last_name, created_at FROM users LIMIT 10').all();
+    res.json({ users, count: users.length });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Update user profile
 router.put('/profile', authenticateToken, (req, res) => {
   try {
