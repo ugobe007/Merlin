@@ -1114,6 +1114,27 @@ export default function BessQuoteBuilder() {
         </div>
       </div>
 
+      {/* Scroll Indicator */}
+      <div className="flex flex-col items-center py-4 animate-bounce">
+        <div className="text-center mb-2">
+          <p className="text-sm text-gray-600 font-semibold">👇 Scroll down to complete your quote</p>
+          <p className="text-xs text-gray-500">Review assumptions and see your results below</p>
+        </div>
+        <svg 
+          className="w-6 h-6 text-blue-500" 
+          fill="none" 
+          stroke="currentColor" 
+          viewBox="0 0 24 24"
+        >
+          <path 
+            strokeLinecap="round" 
+            strokeLinejoin="round" 
+            strokeWidth={2} 
+            d="M19 14l-7 7m0 0l-7-7m7 7V3"
+          />
+        </svg>
+      </div>
+
       {/* Assumptions Panel */}
       <div className="border rounded p-4 space-y-3 bg-blue-50">
         <div className="font-semibold text-lg">Assumptions (editable / import overrides)</div>
@@ -1149,20 +1170,20 @@ export default function BessQuoteBuilder() {
             
             {/* Country Selector for Tariff Lookup */}
             <div className="col-span-2">
-              <label className="block text-sm font-medium mb-1">
-                Country (for tariff lookup): 
+              <label className="block text-sm font-bold mb-2">
+                🌍 Country (for tariff lookup): 
                 <span className="text-blue-600 font-semibold ml-2">
                   Battery: {(getBatteryTariffByCountry(assm.country) * 100).toFixed(1)}% | 
                   Other: {(getTariffByCountry(assm.country) * 100).toFixed(1)}%
                 </span>
               </label>
               <select 
-                className="w-full border rounded px-3 py-2 bg-white" 
+                className="w-full border-2 border-blue-300 rounded-lg px-4 py-3 bg-white text-gray-800 font-semibold shadow-sm hover:border-blue-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all" 
                 value={assm.country}
                 onChange={(e) => updateAssumption('country', e.target.value)}
               >
                 {Object.keys(COUNTRY_TARIFF_LOOKUP).map(country => (
-                  <option key={country} value={country}>
+                  <option key={country} value={country} className="font-semibold">
                     {country} (Battery: {(BATTERY_TARIFF_LOOKUP[country] * 100).toFixed(1)}% | Other: {(COUNTRY_TARIFF_LOOKUP[country] * 100).toFixed(1)}%)
                   </option>
                 ))}
