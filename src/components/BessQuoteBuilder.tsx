@@ -249,6 +249,10 @@ export default function BessQuoteBuilder() {
   const [currentPrice, setCurrentPrice] = useState<number | null>(0.12)
   const [magicalExport, setMagicalExport] = useState(false)
   const [pendingSave, setPendingSave] = useState<any>(null) // Store quote data pending save after login
+  const [showSavePrompt, setShowSavePrompt] = useState(false) // Custom save prompt modal
+  const [savePromptData, setSavePromptData] = useState<{projectName: string} | null>(null)
+  const [showSessionExpired, setShowSessionExpired] = useState(false) // Session expired modal
+  const [showSaveSuccess, setShowSaveSuccess] = useState(false) // Save success modal
   const [showSmartWizard, setShowSmartWizard] = useState(false)
   const [wizardStep, setWizardStep] = useState(1)
   const [wizardData, setWizardData] = useState({
@@ -638,22 +642,10 @@ export default function BessQuoteBuilder() {
     // Check if user is logged in
     const token = localStorage.getItem('auth_token');
     if (!token) {
-      // User is not logged in - prompt them to sign up/log in
-      const userChoice = confirm(
-        `💾 "${snap.name}" saved locally!\n\n` +
-        `🔐 Create an account or log in to:\n` +
-        `• Save quotes permanently to your Portfolio\n` +
-        `• Access quotes from any device\n` +
-        `• Export professional quotes with your company branding\n\n` +
-        `Click "OK" to sign up/log in, or "Cancel" to continue with local save only.`
-      );
-      
-      if (userChoice) {
-        // Store the quote data for saving after login
-        setPendingSave(snap);
-        // Open the user profile modal for login/signup
-        setShowUserProfile(true);
-      }
+      // User is not logged in - show custom save prompt modal
+      setPendingSave(snap);
+      setSavePromptData({ projectName: snap.name });
+      setShowSavePrompt(true);
       return;
     }
     
@@ -662,25 +654,14 @@ export default function BessQuoteBuilder() {
     
     switch (saveResult) {
       case 'success':
-        const viewPortfolio = confirm(
-          `✅ Project "${snap.name}" saved successfully to your Portfolio!\n\n` +
-          `Would you like to view your Portfolio now?`
-        );
-        if (viewPortfolio) {
-          setShowPortfolio(true);
-        }
+        setSavePromptData({ projectName: snap.name });
+        setShowSaveSuccess(true);
         break;
       case 'auth-failed':
-        // Session expired - prompt to log in again with the current quote
-        const retryChoice = confirm(
-          `⚠️ Your session has expired!\n\n` +
-          `"${snap.name}" is saved locally, but we couldn't save it to your Portfolio.\n\n` +
-          `Would you like to log in again to save this quote to your Portfolio?`
-        );
-        if (retryChoice) {
-          setPendingSave(snap);
-          setShowUserProfile(true);
-        }
+        // Session expired - show custom modal
+        setPendingSave(snap);
+        setSavePromptData({ projectName: snap.name });
+        setShowSessionExpired(true);
         break;
       case 'error':
         alert(`⚠️ Project "${snap.name}" saved locally, but failed to save to Portfolio. Please check your connection and try again later.`);
@@ -750,14 +731,9 @@ export default function BessQuoteBuilder() {
     
     switch (saveResult) {
       case 'success':
-        const viewPortfolio = confirm(
-          `🎉 Welcome! Your quote "${pendingSave.name}" has been saved to your Portfolio!\n\n` +
-          `Would you like to view your Portfolio now?`
-        );
-        if (viewPortfolio) {
-          setShowUserProfile(false);
-          setShowPortfolio(true);
-        }
+        setShowUserProfile(false);
+        setSavePromptData({ projectName: pendingSave.name });
+        setShowSaveSuccess(true);
         break;
       case 'auth-failed':
         alert(`⚠️ Authentication failed. Please try logging in again.`);
@@ -1473,6 +1449,166 @@ export default function BessQuoteBuilder() {
           onClose={() => setShowPortfolio(false)}
           onLoadQuote={handleLoadFromPortfolio}
         />
+      )}
+
+      {/* Custom Save Prompt Modal */}
+      {showSavePrompt && savePromptData && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+            <div className="p-6">
+              <div className="text-center mb-6">
+                <div className="text-6xl mb-4">💾</div>
+                <h2 className="text-xl font-bold text-gray-800 mb-2">
+                  Project "{savePromptData.projectName}" Saved Locally!
+                </h2>
+                <p className="text-gray-600 mb-4">
+                  Your quote is saved on this device. Create an account to unlock more features:
+                </p>
+                <div className="text-left bg-blue-50 p-4 rounded-lg mb-6">
+                  <ul className="text-sm text-gray-700 space-y-2">
+                    <li className="flex items-center">
+                      <span className="text-green-600 mr-2">✓</span>
+                      Save quotes permanently to your Portfolio
+                    </li>
+                    <li className="flex items-center">
+                      <span className="text-green-600 mr-2">✓</span>
+                      Access quotes from any device
+                    </li>
+                    <li className="flex items-center">
+                      <span className="text-green-600 mr-2">✓</span>
+                      Export professional quotes with your branding
+                    </li>
+                    <li className="flex items-center">
+                      <span className="text-green-600 mr-2">✓</span>
+                      Share quotes with your team
+                    </li>
+                  </ul>
+                </div>
+              </div>
+              
+              <div className="flex flex-col gap-3">
+                <button
+                  onClick={() => {
+                    setShowSavePrompt(false);
+                    setShowUserProfile(true);
+                  }}
+                  className="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:from-purple-700 hover:to-blue-700 transition-all flex items-center justify-center gap-2"
+                >
+                  <span>🚀</span>
+                  Create Account & Save to Portfolio
+                </button>
+                
+                <button
+                  onClick={() => {
+                    setShowSavePrompt(false);
+                  }}
+                  className="border border-gray-300 text-gray-700 px-6 py-2 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  Continue with Local Save Only
+                </button>
+              </div>
+              
+              <p className="text-xs text-gray-500 text-center mt-4">
+                Already have an account? Click "Create Account" to log in instead.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Session Expired Modal */}
+      {showSessionExpired && savePromptData && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+            <div className="p-6">
+              <div className="text-center mb-6">
+                <div className="text-6xl mb-4">⚠️</div>
+                <h2 className="text-xl font-bold text-gray-800 mb-2">
+                  Session Expired
+                </h2>
+                <p className="text-gray-600 mb-4">
+                  Your session has expired! "{savePromptData.projectName}" is saved locally, but we couldn't save it to your Portfolio.
+                </p>
+                <p className="text-gray-600">
+                  Would you like to log in again to save this quote to your Portfolio?
+                </p>
+              </div>
+              
+              <div className="flex flex-col gap-3">
+                <button
+                  onClick={() => {
+                    setShowSessionExpired(false);
+                    setShowUserProfile(true);
+                  }}
+                  className="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:from-purple-700 hover:to-blue-700 transition-all flex items-center justify-center gap-2"
+                >
+                  <span>🔐</span>
+                  Log In Again
+                </button>
+                
+                <button
+                  onClick={() => {
+                    setShowSessionExpired(false);
+                    setPendingSave(null);
+                    setSavePromptData(null);
+                  }}
+                  className="border border-gray-300 text-gray-700 px-6 py-2 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  Continue with Local Save
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Save Success Modal */}
+      {showSaveSuccess && savePromptData && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+            <div className="p-6">
+              <div className="text-center mb-6">
+                <div className="text-6xl mb-4">🎉</div>
+                <h2 className="text-xl font-bold text-gray-800 mb-2">
+                  {pendingSave ? 'Welcome!' : 'Success!'}
+                </h2>
+                <p className="text-gray-600 mb-4">
+                  {pendingSave 
+                    ? `Welcome! Your quote "${savePromptData.projectName}" has been saved to your Portfolio!`
+                    : `Project "${savePromptData.projectName}" saved successfully to your Portfolio!`
+                  }
+                </p>
+                <p className="text-gray-600">
+                  Would you like to view your Portfolio now?
+                </p>
+              </div>
+              
+              <div className="flex flex-col gap-3">
+                <button
+                  onClick={() => {
+                    setShowSaveSuccess(false);
+                    setShowPortfolio(true);
+                    setSavePromptData(null);
+                  }}
+                  className="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:from-purple-700 hover:to-blue-700 transition-all flex items-center justify-center gap-2"
+                >
+                  <span>📁</span>
+                  View My Portfolio
+                </button>
+                
+                <button
+                  onClick={() => {
+                    setShowSaveSuccess(false);
+                    setSavePromptData(null);
+                  }}
+                  className="border border-gray-300 text-gray-700 px-6 py-2 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  Continue Working
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Smart Wizard Modal */}
