@@ -1131,18 +1131,24 @@ export default function BessQuoteBuilder() {
                       ].map((equipment) => (
                         <button
                           key={equipment.key}
-                          className={`p-3 rounded-lg border-2 text-left transition-all ${
+                          type="button"
+                          className={`p-3 rounded-lg border-2 text-left transition-all cursor-pointer ${
                             wizardData.equipmentNeeded[equipment.key as keyof typeof wizardData.equipmentNeeded]
                               ? 'border-green-500 bg-green-100 text-green-800'
-                              : 'border-gray-200 hover:border-gray-300 bg-white'
+                              : 'border-gray-200 hover:border-gray-300 bg-white hover:bg-gray-50'
                           }`}
-                          onClick={() => setWizardData({
-                            ...wizardData, 
-                            equipmentNeeded: {
-                              ...wizardData.equipmentNeeded,
-                              [equipment.key]: !wizardData.equipmentNeeded[equipment.key as keyof typeof wizardData.equipmentNeeded]
-                            }
-                          })}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            console.log('Equipment button clicked:', equipment.key);
+                            setWizardData({
+                              ...wizardData, 
+                              equipmentNeeded: {
+                                ...wizardData.equipmentNeeded,
+                                [equipment.key]: !wizardData.equipmentNeeded[equipment.key as keyof typeof wizardData.equipmentNeeded]
+                              }
+                            });
+                          }}
                         >
                           <div className="flex items-center space-x-2">
                             <span className="text-xl">{equipment.icon}</span>
@@ -1219,12 +1225,16 @@ export default function BessQuoteBuilder() {
                           ].map((type) => (
                             <button
                               key={type.value}
-                              className={`p-2 rounded-lg border-2 text-left transition-all ${
+                              type="button"
+                              className={`p-2 rounded-lg border-2 text-left transition-all cursor-pointer ${
                                 wizardData.hybridConfig.generationType === type.value
                                   ? 'border-orange-500 bg-orange-100 text-orange-800 shadow-md'
                                   : 'border-gray-200 hover:border-gray-300 bg-white hover:bg-gray-50'
                               }`}
-                              onClick={() => {
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                console.log('Generation type clicked:', type.value);
                                 setWizardData({
                                   ...wizardData,
                                   hybridConfig: {
@@ -1259,12 +1269,18 @@ export default function BessQuoteBuilder() {
                       ].map((app) => (
                         <button
                           key={app.value}
-                          className={`p-3 rounded-lg border-2 text-left transition-all ${
+                          type="button"
+                          className={`p-3 rounded-lg border-2 text-left transition-all cursor-pointer ${
                             wizardData.application === app.value
                               ? 'border-purple-500 bg-purple-50 text-purple-800'
-                              : 'border-gray-200 hover:border-gray-300'
+                              : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
                           }`}
-                          onClick={() => setWizardData({...wizardData, application: app.value})}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            console.log('Application button clicked:', app.value);
+                            setWizardData({...wizardData, application: app.value});
+                          }}
                         >
                           <div className="flex items-center space-x-2">
                             <span className="text-xl">{app.icon}</span>
@@ -1278,9 +1294,46 @@ export default function BessQuoteBuilder() {
                     </div>
                   </div>
 
+                  {/* Comprehensive Test Panel */}
+                  <div className="bg-red-50 p-4 rounded-lg border border-red-200 mt-4">
+                    <h4 className="font-bold text-red-800 mb-2">🔧 Button Test Panel (Remove after testing)</h4>
+                    <div className="grid grid-cols-2 gap-4 text-xs">
+                      <div>
+                        <strong>Equipment Selection:</strong>
+                        <div>BESS: {wizardData.equipmentNeeded.bess ? '✅' : '❌'}</div>
+                        <div>Power Gen: {wizardData.equipmentNeeded.powerGeneration ? '✅' : '❌'}</div>
+                        <div>Solar: {wizardData.equipmentNeeded.solar ? '✅' : '❌'}</div>
+                        <div>Wind: {wizardData.equipmentNeeded.wind ? '✅' : '❌'}</div>
+                        <div>Hybrid: {wizardData.equipmentNeeded.hybrid ? '✅' : '❌'}</div>
+                        <div>Grid: {wizardData.equipmentNeeded.grid ? '✅' : '❌'}</div>
+                      </div>
+                      <div>
+                        <strong>Configuration:</strong>
+                        <div>Application: {wizardData.application || '❌ None'}</div>
+                        <div>Power MW: {wizardData.powerMW}</div>
+                        <div>Grid: {wizardData.gridConnection}</div>
+                        <div>Gen Type: {wizardData.hybridConfig.generationType}</div>
+                        <div>Gen MW: {wizardData.hybridConfig.generationMW}</div>
+                        <div>Storage MWh: {wizardData.hybridConfig.storageMWh}</div>
+                      </div>
+                    </div>
+                    <div className="mt-2 text-xs">
+                      <strong>Next Button Status:</strong> {(
+                        !wizardData.application || 
+                        (!wizardData.equipmentNeeded.bess && !wizardData.equipmentNeeded.hybrid) ||
+                        (wizardData.equipmentNeeded.hybrid && (
+                          !wizardData.hybridConfig.generationType || 
+                          wizardData.hybridConfig.generationMW === 0 || 
+                          wizardData.hybridConfig.storageMWh === 0
+                        ))
+                      ) ? '🔴 DISABLED' : '✅ ENABLED'}
+                    </div>
+                  </div>
+
                   <div className="flex justify-end space-x-3">
                     <button
-                      className="px-6 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors disabled:opacity-50"
+                      type="button"
+                      className="px-6 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors disabled:opacity-50 cursor-pointer"
                       style={{ color: '#FDE047', fontWeight: 'bold', textShadow: '1px 1px 2px rgba(0,0,0,0.8)' }}
                       disabled={
                         !wizardData.application || 
@@ -1291,7 +1344,12 @@ export default function BessQuoteBuilder() {
                           wizardData.hybridConfig.storageMWh === 0
                         ))
                       }
-                      onClick={() => setWizardStep(2)}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        console.log('Next Step (1→2) button clicked, current state:', wizardData);
+                        setWizardStep(2);
+                      }}
                     >
                       Next Step →
                     </button>
