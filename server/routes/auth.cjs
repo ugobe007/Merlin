@@ -188,6 +188,17 @@ router.post('/quotes', authenticateToken, (req, res) => {
       return res.status(400).json({ error: 'Missing required quote data' });
     }
 
+    // Debug logging
+    console.log('[save-quote] User ID from token:', req.user.userId);
+    console.log('[save-quote] Project name:', project_name);
+    
+    // Check if user exists
+    const user = req.db.getUserById(req.user.userId);
+    if (!user) {
+      console.log('[save-quote] User not found in database:', req.user.userId);
+      return res.status(404).json({ error: 'User not found. Please log in again.' });
+    }
+
     const quoteData = {
       project_name,
       inputs,
@@ -198,10 +209,17 @@ router.post('/quotes', authenticateToken, (req, res) => {
     };
 
     const quote = req.db.saveUserQuote(req.user.userId, quoteData);
+    console.log('[save-quote] Quote saved successfully for user:', req.user.userId);
     res.status(201).json({ message: 'Quote saved successfully', quote });
 
   } catch (error) {
     console.error('Save quote error:', error);
+    console.error('Error details:', {
+      message: error.message,
+      code: error.code,
+      userId: req.user?.userId,
+      stack: error.stack
+    });
     res.status(500).json({ error: 'Failed to save quote' });
   }
 });

@@ -645,6 +645,21 @@ class QuoteDatabase {
     const id = generateUUID();
     const now = new Date().toISOString();
     
+    // Debug logging
+    console.log('[db] saveUserQuote called with userId:', userId);
+    console.log('[db] Checking if user exists...');
+    
+    // Check if user exists first
+    const userCheck = this.db.prepare('SELECT id FROM users WHERE id = ?');
+    const userExists = userCheck.get(userId);
+    
+    if (!userExists) {
+      console.log('[db] User not found in database:', userId);
+      throw new Error(`User with ID ${userId} not found in database`);
+    }
+    
+    console.log('[db] User exists, proceeding with quote save');
+    
     const stmt = this.db.prepare(`
       INSERT INTO user_quotes (id, user_id, project_name, inputs, assumptions, outputs, tags, notes, created_at, updated_at)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
