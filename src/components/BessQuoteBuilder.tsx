@@ -1195,7 +1195,9 @@ export default function BessQuoteBuilder() {
         <div className="mt-2">Grand CapEx (pre-warranty): <strong>{money(out.grandCapexBeforeWarranty)}</strong></div>
         <div>Grand CapEx (incl. warranty {inputs.warrantyYears}y{inputs.warrantyYears === 20 ? ' +10%' : ''}): <strong>{money(out.grandCapex)}</strong></div>
 
-        <div className="mt-2">Annual Savings: <strong>{money(out.annualSavings)}</strong></div>
+        <div className="mt-2 bg-yellow-300 p-2 rounded-lg border border-yellow-400 shadow-sm">
+          <span className="font-semibold text-gray-800">💰 Annual Savings: <strong className="text-green-700">{money(out.annualSavings)}</strong></span>
+        </div>
         <div>ROI (years): <strong>{out.roiYears ? out.roiYears.toFixed(2) : '—'}</strong></div>
         {'budgetDelta' in out && inputs.budgetKnown && typeof out.budgetDelta === 'number' && (
           <div>Budget Delta: <strong className={out.budgetDelta >= 0 ? 'text-green-600' : 'text-red-600'}>
