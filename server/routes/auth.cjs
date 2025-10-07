@@ -144,17 +144,6 @@ router.get('/profile', authenticateToken, (req, res) => {
   }
 });
 
-// DEBUG: List all users (temporary)
-router.get('/debug/users', (req, res) => {
-  try {
-    const users = req.db.db.prepare('SELECT id, email, first_name, last_name, created_at FROM users').all();
-    res.json({ users, count: users.length });
-  } catch (error) {
-    console.error('Debug users error:', error);
-    res.status(500).json({ error: 'Failed to get users' });
-  }
-});
-
 // Update user profile
 router.put('/profile', authenticateToken, (req, res) => {
   try {

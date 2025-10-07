@@ -94,11 +94,9 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, onLoadQuote 
       setError(null);
       
       const token = localStorage.getItem('auth_token');
-      console.log('Profile fetch - Token exists:', !!token);
-      console.log('Profile fetch - Token preview:', token ? token.substring(0, 20) + '...' : 'No token');
       
       if (!token) {
-        throw new Error('No authentication token found');
+        throw new Error('No authentication token found. Please log in again.');
       }
       
       const response = await fetch('https://merlin.fly.dev/api/auth/profile', {
@@ -109,17 +107,17 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, onLoadQuote 
         },
       });
 
-      console.log('Profile fetch - Response status:', response.status);
-      console.log('Profile fetch - Response ok:', response.ok);
-
       if (!response.ok) {
-        const errorText = await response.text();
-        console.log('Profile fetch - Error response:', errorText);
+        if (response.status === 404) {
+          // User not found in database - clear token and ask to register again
+          localStorage.removeItem('auth_token');
+          setIsLoggedIn(false);
+          throw new Error('User not found. Please register or log in again.');
+        }
         throw new Error(`Failed to load profile: ${response.status}`);
       }
 
       const data = await response.json();
-      console.log('Profile fetch - Success data:', data);
       setUser(data);
       setProfileForm({
         first_name: data.first_name || '',
@@ -515,123 +513,150 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, onLoadQuote 
 
             {activeTab === 'profile' && (
               <div>
-                {/* User Info Display */}
-                <div className="bg-gray-50 rounded-lg p-4 mb-6">
-                  <h3 className="text-lg font-semibold mb-3">Current Profile Information</h3>
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <span className="font-medium text-gray-600">Name:</span>
-                      <p>{user?.first_name && user?.last_name 
-                        ? `${user.first_name} ${user.last_name}` 
-                        : 'Not provided'}</p>
+                {/* Professional Profile Header */}
+                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-6 mb-6 border border-blue-100">
+                  <div className="flex items-center space-x-4">
+                    <div className="bg-blue-100 rounded-full p-3">
+                      <User size={32} className="text-blue-600" />
                     </div>
                     <div>
-                      <span className="font-medium text-gray-600">Email:</span>
-                      <p>{user?.email}</p>
-                    </div>
-                    <div>
-                      <span className="font-medium text-gray-600">Company:</span>
-                      <p>{user?.company || 'Not provided'}</p>
-                    </div>
-                    <div>
-                      <span className="font-medium text-gray-600">Phone:</span>
-                      <p>{user?.phone || 'Not provided'}</p>
-                    </div>
-                    <div>
-                      <span className="font-medium text-gray-600">Title:</span>
-                      <p>{user?.title || 'Not provided'}</p>
-                    </div>
-                    <div>
-                      <span className="font-medium text-gray-600">LinkedIn:</span>
-                      <p>{user?.linkedin ? (
-                        <a href={user.linkedin} target="_blank" rel="noopener noreferrer" 
-                           className="text-blue-600 hover:underline">
-                          View Profile
-                        </a>
-                      ) : 'Not provided'}</p>
+                      <h2 className="text-xl font-bold text-gray-900">
+                        {user?.first_name && user?.last_name 
+                          ? `${user.first_name} ${user.last_name}` 
+                          : 'Professional Profile'}
+                      </h2>
+                      <p className="text-gray-600">{user?.title || 'Energy Professional'}</p>
+                      <p className="text-sm text-gray-500">{user?.company || 'Company'}</p>
                     </div>
                   </div>
                 </div>
 
-                {/* Update Profile Form */}
-                <h3 className="text-lg font-semibold mb-4">Update Profile</h3>
-                <form onSubmit={handleUpdateProfile} className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium mb-1">First Name</label>
-                    <input
-                      type="text"
-                      value={profileForm.first_name}
-                      onChange={(e) => setProfileForm({...profileForm, first_name: e.target.value})}
-                      className="w-full border border-gray-300 rounded px-3 py-2"
-                    />
+                {/* Professional Contact Card */}
+                <div className="bg-white rounded-lg border border-gray-200 shadow-sm mb-6">
+                  <div className="px-6 py-4 border-b border-gray-200">
+                    <h3 className="text-lg font-semibold text-gray-900">Contact Information</h3>
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-1">Last Name</label>
-                    <input
-                      type="text"
-                      value={profileForm.last_name}
-                      onChange={(e) => setProfileForm({...profileForm, last_name: e.target.value})}
-                      className="w-full border border-gray-300 rounded px-3 py-2"
-                    />
+                  <div className="p-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="space-y-4">
+                        <div>
+                          <label className="text-sm font-medium text-gray-500 uppercase tracking-wide">Email</label>
+                          <p className="mt-1 text-gray-900 font-medium">{user?.email}</p>
+                        </div>
+                        <div>
+                          <label className="text-sm font-medium text-gray-500 uppercase tracking-wide">Phone</label>
+                          <p className="mt-1 text-gray-900">{user?.phone || 'Not provided'}</p>
+                        </div>
+                      </div>
+                      <div className="space-y-4">
+                        <div>
+                          <label className="text-sm font-medium text-gray-500 uppercase tracking-wide">Company</label>
+                          <p className="mt-1 text-gray-900">{user?.company || 'Not provided'}</p>
+                        </div>
+                        <div>
+                          <label className="text-sm font-medium text-gray-500 uppercase tracking-wide">LinkedIn</label>
+                          {user?.linkedin ? (
+                            <a href={user.linkedin} target="_blank" rel="noopener noreferrer" 
+                               className="mt-1 text-blue-600 hover:text-blue-800 font-medium flex items-center">
+                              View LinkedIn Profile
+                              <svg className="ml-1 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                              </svg>
+                            </a>
+                          ) : (
+                            <p className="mt-1 text-gray-400">Not provided</p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">Email</label>
-                  <input
-                    type="email"
-                    value={user?.email || ''}
-                    disabled
-                    className="w-full border border-gray-300 rounded px-3 py-2 bg-gray-100"
-                  />
+
+                {/* Update Profile Section */}
+                <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
+                  <div className="px-6 py-4 border-b border-gray-200">
+                    <h3 className="text-lg font-semibold text-gray-900">Update Profile Information</h3>
+                    <p className="text-sm text-gray-600 mt-1">Keep your professional details up to date</p>
+                  </div>
+                  <div className="p-6">
+                    <form onSubmit={handleUpdateProfile} className="space-y-6">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">First Name</label>
+                          <input
+                            type="text"
+                            value={profileForm.first_name}
+                            onChange={(e) => setProfileForm({...profileForm, first_name: e.target.value})}
+                            className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Last Name</label>
+                          <input
+                            type="text"
+                            value={profileForm.last_name}
+                            onChange={(e) => setProfileForm({...profileForm, last_name: e.target.value})}
+                            className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          />
+                        </div>
+                      </div>
+                      
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Professional Title</label>
+                        <input
+                          type="text"
+                          value={profileForm.title}
+                          onChange={(e) => setProfileForm({...profileForm, title: e.target.value})}
+                          placeholder="e.g., Senior Project Manager, Chief Engineer, Business Development Director"
+                          className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Company</label>
+                          <input
+                            type="text"
+                            value={profileForm.company}
+                            onChange={(e) => setProfileForm({...profileForm, company: e.target.value})}
+                            className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Phone Number</label>
+                          <input
+                            type="tel"
+                            value={profileForm.phone}
+                            onChange={(e) => setProfileForm({...profileForm, phone: e.target.value})}
+                            className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">LinkedIn Profile URL</label>
+                        <input
+                          type="url"
+                          value={profileForm.linkedin}
+                          onChange={(e) => setProfileForm({...profileForm, linkedin: e.target.value})}
+                          placeholder="https://linkedin.com/in/yourprofile"
+                          className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        />
+                      </div>
+
+                      <div className="pt-4">
+                        <button
+                          type="submit"
+                          disabled={loading}
+                          className="flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium transition-colors"
+                        >
+                          <Save size={18} className="mr-2" />
+                          {loading ? 'Updating Profile...' : 'Update Profile'}
+                        </button>
+                      </div>
+                    </form>
+                  </div>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">Company</label>
-                  <input
-                    type="text"
-                    value={profileForm.company}
-                    onChange={(e) => setProfileForm({...profileForm, company: e.target.value})}
-                    className="w-full border border-gray-300 rounded px-3 py-2"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">Phone</label>
-                  <input
-                    type="tel"
-                    value={profileForm.phone}
-                    onChange={(e) => setProfileForm({...profileForm, phone: e.target.value})}
-                    className="w-full border border-gray-300 rounded px-3 py-2"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">Title/Position</label>
-                  <input
-                    type="text"
-                    value={profileForm.title}
-                    onChange={(e) => setProfileForm({...profileForm, title: e.target.value})}
-                    placeholder="e.g., Project Manager, Engineer, Director"
-                    className="w-full border border-gray-300 rounded px-3 py-2"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">LinkedIn Profile</label>
-                  <input
-                    type="url"
-                    value={profileForm.linkedin}
-                    onChange={(e) => setProfileForm({...profileForm, linkedin: e.target.value})}
-                    placeholder="https://linkedin.com/in/yourprofile"
-                    className="w-full border border-gray-300 rounded px-3 py-2"
-                  />
-                </div>
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="flex items-center px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
-                >
-                  <Save size={16} className="mr-2" />
-                  {loading ? 'Updating...' : 'Update Profile'}
-                </button>
-              </form>
               </div>
             )}
 
