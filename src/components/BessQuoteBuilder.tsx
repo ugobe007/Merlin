@@ -658,23 +658,43 @@ export default function BessQuoteBuilder() {
     }
     
     // User is logged in - try to save to portfolio
-    const portfolioSaved = await saveToPortfolio(snap);
+    const saveResult = await saveToPortfolio(snap);
     
-    if (portfolioSaved) {
-      alert(`✅ Project "${snap.name}" saved successfully to your Portfolio!`);
-    } else {
-      // Token exists but save failed - this will be handled by saveToPortfolio function
-      // which will clear the token if it's expired and show appropriate message
-      alert(`⚠️ Project "${snap.name}" saved locally, but failed to save to Portfolio. Please check your connection and try logging in again.`);
+    switch (saveResult) {
+      case 'success':
+        const viewPortfolio = confirm(
+          `✅ Project "${snap.name}" saved successfully to your Portfolio!\n\n` +
+          `Would you like to view your Portfolio now?`
+        );
+        if (viewPortfolio) {
+          setShowPortfolio(true);
+        }
+        break;
+      case 'auth-failed':
+        // Session expired - prompt to log in again with the current quote
+        const retryChoice = confirm(
+          `⚠️ Your session has expired!\n\n` +
+          `"${snap.name}" is saved locally, but we couldn't save it to your Portfolio.\n\n` +
+          `Would you like to log in again to save this quote to your Portfolio?`
+        );
+        if (retryChoice) {
+          setPendingSave(snap);
+          setShowUserProfile(true);
+        }
+        break;
+      case 'error':
+        alert(`⚠️ Project "${snap.name}" saved locally, but failed to save to Portfolio. Please check your connection and try again later.`);
+        break;
+      // 'no-token' case shouldn't happen here since we check for token above
     }
   }
 
-  async function saveToPortfolio(projectData: any) {
+  async function saveToPortfolio(projectData: any): Promise<'success' | 'no-token' | 'auth-failed' | 'error'> {
     try {
       const token = localStorage.getItem('auth_token');
       if (!token) {
         console.log('No auth token - saving to localStorage only');
-        return false;
+        return 'no-token';
       }
 
       // Calculate outputs for the portfolio
@@ -702,7 +722,7 @@ export default function BessQuoteBuilder() {
         console.log('Project saved to portfolio successfully');
         // Trigger portfolio refresh if it's open
         window.dispatchEvent(new CustomEvent('portfolio-refresh'));
-        return true;
+        return 'success';
       } else {
         const errorText = await response.text();
         console.error('Failed to save to portfolio:', errorText);
@@ -711,16 +731,14 @@ export default function BessQuoteBuilder() {
         if (response.status === 401 || response.status === 403) {
           console.log('Authentication failed - clearing invalid token');
           localStorage.removeItem('auth_token');
-          // Show a more specific error message
-          alert('⚠️ Your session has expired. Please log in again to save to Portfolio.');
-          return false;
+          return 'auth-failed';
         }
         
-        return false;
+        return 'error';
       }
     } catch (error) {
       console.error('Error saving to portfolio:', error);
-      return false;
+      return 'error';
     }
   }
 
@@ -728,12 +746,28 @@ export default function BessQuoteBuilder() {
     if (!pendingSave) return;
     
     console.log('Attempting to save pending quote after login:', pendingSave);
-    const portfolioSaved = await saveToPortfolio(pendingSave);
+    const saveResult = await saveToPortfolio(pendingSave);
     
-    if (portfolioSaved) {
-      alert(`🎉 Welcome! Your quote "${pendingSave.name}" has been saved to your Portfolio!`);
-    } else {
-      alert(`⚠️ Welcome! Your quote "${pendingSave.name}" is saved locally, but we couldn't save it to your Portfolio. Please try again.`);
+    switch (saveResult) {
+      case 'success':
+        const viewPortfolio = confirm(
+          `🎉 Welcome! Your quote "${pendingSave.name}" has been saved to your Portfolio!\n\n` +
+          `Would you like to view your Portfolio now?`
+        );
+        if (viewPortfolio) {
+          setShowUserProfile(false);
+          setShowPortfolio(true);
+        }
+        break;
+      case 'auth-failed':
+        alert(`⚠️ Authentication failed. Please try logging in again.`);
+        break;
+      case 'error':
+        alert(`⚠️ Welcome! Your quote "${pendingSave.name}" is saved locally, but we couldn't save it to your Portfolio. Please try again later.`);
+        break;
+      case 'no-token':
+        alert(`⚠️ Please log in to save to Portfolio.`);
+        break;
     }
     
     // Clear the pending save
