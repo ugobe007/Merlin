@@ -81,67 +81,45 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, onLoadQuote 
     const token = localStorage.getItem('auth_token');
     if (token) {
       setIsLoggedIn(true);
-      fetchProfile();
+      loadProfile();
       fetchQuotes();
     }
   }, [isOpen]);
 
-  const fetchProfile = async () => {
+  const loadProfile = async () => {
     try {
       setLoading(true);
+      setError(null);
       
       const token = localStorage.getItem('auth_token');
-      console.log('Fetching profile with token:', token ? 'Token exists' : 'No token');
-      console.log('API_BASE:', API_BASE);
+      const PROFILE_URL = 'https://merlin.fly.dev/api/auth/profile';
       
-      console.log(`EMERGENCY FETCH ATTEMPT ${debugTimestamp}`);
-      console.log('Using hardcoded URL:', PROFILE_URL);
-      
-      // FORCE VISIBILITY - This will definitely show up
       alert(`DEBUG: About to fetch ${PROFILE_URL} with token: ${token ? 'EXISTS' : 'MISSING'}`);
       
       const response = await fetch(PROFILE_URL, {
+        method: 'GET',
         headers: {
+          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
-          ...getAuthHeaders()
-        }
+        },
       });
 
-      console.log('Profile fetch response status:', response.status);
-      
-      // FORCE VISIBILITY - Show response status
-      alert(`DEBUG: Response status: ${response.status}`);
-      
-      if (response.ok) {
-        const data = await response.json();
-        console.log('Profile data received:', data);
-        setUser(data.user);
-        setProfileForm({
-          first_name: data.user.first_name || '',
-          last_name: data.user.last_name || '',
-          company: data.user.company || '',
-          phone: data.user.phone || '',
-          title: data.user.title || '',
-          linkedin: data.user.linkedin || ''
-        });
-      } else {
+      alert(`DEBUG: Response status: ${response.status}, status text: ${response.statusText}`);
+      alert(`DEBUG: Response headers: ${JSON.stringify([...response.headers.entries()])}`);
+
+      if (!response.ok) {
         const errorText = await response.text();
-        console.log('Profile fetch failed:', response.status, errorText);
-        
-        // If token is invalid, log user out
-        if (response.status === 401 || response.status === 403) {
-          console.log('Invalid token, logging out user');
-          localStorage.removeItem('auth_token');
-          setIsLoggedIn(false);
-          setUser(null);
-          return;
-        }
-        
-        throw new Error(`Failed to fetch profile: ${response.status}`);
+        alert(`DEBUG: Error response body: ${errorText}`);
+        throw new Error(`Failed to load profile: ${response.status}`);
       }
-    } catch (err) {
-      console.error('Profile fetch error:', err);
-      setError('Failed to load profile');
+
+      const data = await response.json();
+      alert(`DEBUG: Success! Profile data: ${JSON.stringify(data)}`);
+      setUser(data);
+    } catch (error) {
+      console.error('Profile loading error:', error);
+      alert(`DEBUG: Catch block error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      setError(error instanceof Error ? error.message : 'An error occurred');
     } finally {
       setLoading(false);
     }
