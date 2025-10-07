@@ -79,10 +79,12 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, onLoadQuote 
 
   useEffect(() => {
     const token = localStorage.getItem('auth_token');
-    if (token) {
+    if (token && isOpen) {
       setIsLoggedIn(true);
       loadProfile();
       fetchQuotes();
+    } else if (token) {
+      setIsLoggedIn(true);
     }
   }, [isOpen]);
 
@@ -92,11 +94,8 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, onLoadQuote 
       setError(null);
       
       const token = localStorage.getItem('auth_token');
-      const PROFILE_URL = 'https://merlin.fly.dev/api/auth/profile';
       
-      alert(`DEBUG: About to fetch ${PROFILE_URL} with token: ${token ? 'EXISTS' : 'MISSING'}`);
-      
-      const response = await fetch(PROFILE_URL, {
+      const response = await fetch('https://merlin.fly.dev/api/auth/profile', {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -104,21 +103,22 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, onLoadQuote 
         },
       });
 
-      alert(`DEBUG: Response status: ${response.status}, status text: ${response.statusText}`);
-      alert(`DEBUG: Response headers: ${JSON.stringify([...response.headers.entries()])}`);
-
       if (!response.ok) {
-        const errorText = await response.text();
-        alert(`DEBUG: Error response body: ${errorText}`);
         throw new Error(`Failed to load profile: ${response.status}`);
       }
 
       const data = await response.json();
-      alert(`DEBUG: Success! Profile data: ${JSON.stringify(data)}`);
       setUser(data);
+      setProfileForm({
+        first_name: data.first_name || '',
+        last_name: data.last_name || '',
+        company: data.company || '',
+        phone: data.phone || '',
+        title: data.title || '',
+        linkedin: data.linkedin || ''
+      });
     } catch (error) {
       console.error('Profile loading error:', error);
-      alert(`DEBUG: Catch block error: ${error instanceof Error ? error.message : 'Unknown error'}`);
       setError(error instanceof Error ? error.message : 'An error occurred');
     } finally {
       setLoading(false);
