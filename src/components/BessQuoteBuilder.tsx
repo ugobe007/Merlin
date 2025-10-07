@@ -253,6 +253,7 @@ export default function BessQuoteBuilder() {
   const [savePromptData, setSavePromptData] = useState<{projectName: string} | null>(null)
   const [showSessionExpired, setShowSessionExpired] = useState(false) // Session expired modal
   const [showSaveSuccess, setShowSaveSuccess] = useState(false) // Save success modal
+  const [showErrorModal, setShowErrorModal] = useState(false) // Error modal
   const [showSmartWizard, setShowSmartWizard] = useState(false)
   const [wizardStep, setWizardStep] = useState(1)
   const [wizardData, setWizardData] = useState({
@@ -641,8 +642,10 @@ export default function BessQuoteBuilder() {
     
     // Check if user is logged in
     const token = localStorage.getItem('auth_token');
+    console.log('DEBUG: Token check:', token ? 'Token exists' : 'No token');
     if (!token) {
       // User is not logged in - show custom save prompt modal
+      console.log('DEBUG: Showing save prompt modal for no token');
       setPendingSave(snap);
       setSavePromptData({ projectName: snap.name });
       setShowSavePrompt(true);
@@ -664,7 +667,9 @@ export default function BessQuoteBuilder() {
         setShowSessionExpired(true);
         break;
       case 'error':
-        alert(`⚠️ Project "${snap.name}" saved locally, but failed to save to Portfolio. Please check your connection and try again later.`);
+        console.log('DEBUG: Network/server error, showing error modal');
+        setSavePromptData({ projectName: snap.name });
+        setShowErrorModal(true);
         break;
       // 'no-token' case shouldn't happen here since we check for token above
     }
@@ -736,13 +741,19 @@ export default function BessQuoteBuilder() {
         setShowSaveSuccess(true);
         break;
       case 'auth-failed':
-        alert(`⚠️ Authentication failed. Please try logging in again.`);
+        console.log('DEBUG: Auth failed in savePendingQuoteAfterLogin');
+        // This shouldn't happen since user just logged in, but handle gracefully
+        setPendingSave(null);
         break;
       case 'error':
-        alert(`⚠️ Welcome! Your quote "${pendingSave.name}" is saved locally, but we couldn't save it to your Portfolio. Please try again later.`);
+        console.log('DEBUG: Error in savePendingQuoteAfterLogin');
+        setSavePromptData({ projectName: pendingSave.name });
+        setShowErrorModal(true);
         break;
       case 'no-token':
-        alert(`⚠️ Please log in to save to Portfolio.`);
+        console.log('DEBUG: No token in savePendingQuoteAfterLogin');
+        // This shouldn't happen since user just logged in
+        setPendingSave(null);
         break;
     }
     
@@ -1664,6 +1675,70 @@ export default function BessQuoteBuilder() {
                   className="w-full border-2 border-gray-200 text-gray-600 px-6 py-3 rounded-xl hover:bg-gray-50 hover:border-gray-300 transition-all duration-200 font-medium"
                 >
                   Continue Working
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Error Modal */}
+      {showErrorModal && savePromptData && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full border border-red-100">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-red-50 to-orange-50 p-6 rounded-t-xl border-b border-red-100">
+              <div className="text-center">
+                <div className="w-16 h-16 mx-auto mb-4 bg-red-100 rounded-full flex items-center justify-center">
+                  <span className="text-3xl">⚠️</span>
+                </div>
+                <h2 className="text-2xl font-bold text-gray-800 mb-2">
+                  Connection Error
+                </h2>
+                <p className="text-gray-600">
+                  Unable to save to Portfolio due to a connection issue
+                </p>
+              </div>
+            </div>
+
+            {/* Content */}
+            <div className="p-6">
+              <div className="text-center mb-6">
+                <div className="bg-blue-50 p-4 rounded-xl border border-blue-200 mb-6">
+                  <p className="text-gray-700 font-semibold mb-1">
+                    📋 "{savePromptData.projectName}"
+                  </p>
+                  <p className="text-sm text-gray-600">
+                    Saved locally, but couldn't sync to Portfolio
+                  </p>
+                </div>
+                
+                <p className="text-gray-700 mb-6">
+                  Please check your internet connection and try again later, or continue working with local storage.
+                </p>
+              </div>
+              
+              <div className="space-y-3">
+                <button
+                  onClick={() => {
+                    setShowErrorModal(false);
+                    setSavePromptData(null);
+                    // Could add a retry mechanism here
+                  }}
+                  className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-6 py-4 rounded-xl font-semibold hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 flex items-center justify-center gap-3 shadow-lg hover:shadow-xl transform hover:scale-[1.02]"
+                >
+                  <span className="text-xl">🔄</span>
+                  <span>Try Again Later</span>
+                </button>
+                
+                <button
+                  onClick={() => {
+                    setShowErrorModal(false);
+                    setSavePromptData(null);
+                  }}
+                  className="w-full border-2 border-gray-200 text-gray-600 px-6 py-3 rounded-xl hover:bg-gray-50 hover:border-gray-300 transition-all duration-200 font-medium"
+                >
+                  Continue with Local Storage
                 </button>
               </div>
             </div>
