@@ -1054,7 +1054,7 @@ export default function BessQuoteBuilder() {
             Load Project
           </button>
           <button 
-            className="border rounded px-3 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white hover:from-purple-700 hover:to-blue-700 transition-all shadow-sm"
+            className="border rounded px-3 py-2 bg-yellow-400 border-yellow-500 text-gray-800 hover:bg-yellow-500 transition-all shadow-sm font-bold"
             onClick={() => {
               const token = localStorage.getItem('auth_token');
               if (!token) {
@@ -1072,25 +1072,25 @@ export default function BessQuoteBuilder() {
 
       {/* Inputs Panel */}
       <div className="grid grid-cols-2 gap-4">
-        <label className="flex flex-col text-sm">Power (MW)
-          <input className="border p-2 rounded" type="number" step="0.1" value={inputs.powerMW}
+        <label className="flex flex-col text-sm font-bold">Power (MW)
+          <input className="border p-2 rounded font-normal" type="number" step="0.1" value={inputs.powerMW}
             onChange={e => updateInputs('powerMW', Number(e.target.value))} />
         </label>
-        <label className="flex flex-col text-sm">Standby Hours
-          <input className="border p-2 rounded" type="number" step="0.5" value={inputs.standbyHours}
+        <label className="flex flex-col text-sm font-bold">Standby Hours
+          <input className="border p-2 rounded font-normal" type="number" step="0.5" value={inputs.standbyHours}
             onChange={e => updateInputs('standbyHours', Number(e.target.value))} />
         </label>
 
-        <label className="flex flex-col text-sm">Grid Mode
-          <select className="border p-2 rounded" value={inputs.gridMode}
+        <label className="flex flex-col text-sm font-bold">Grid Mode
+          <select className="border p-2 rounded font-normal" value={inputs.gridMode}
             onChange={e => updateInputs('gridMode', e.target.value as any)}>
             <option value="on-grid">On-grid</option>
             <option value="off-grid">Off-grid</option>
           </select>
         </label>
 
-        <label className="flex flex-col text-sm">Use Case
-          <select className="border p-2 rounded" value={inputs.useCase}
+        <label className="flex flex-col text-sm font-bold">Use Case
+          <select className="border p-2 rounded font-normal" value={inputs.useCase}
             onChange={e => updateInputs('useCase', e.target.value)}>
             {[
               'EV Charging Stations', 'Car Washes', 'Hotels', 'Data Centers', 'Airports',
@@ -1100,40 +1100,40 @@ export default function BessQuoteBuilder() {
           </select>
         </label>
 
-        <label className="flex flex-col text-sm">Generator (MW)
-          <input className="border p-2 rounded" type="number" step="0.1" value={inputs.generatorMW}
+        <label className="flex flex-col text-sm font-bold">Generator (MW)
+          <input className="border p-2 rounded font-normal" type="number" step="0.1" value={inputs.generatorMW}
             onChange={e => updateInputs('generatorMW', Number(e.target.value))} />
         </label>
-        <label className="flex flex-col text-sm">Solar (MWp)
-          <input className="border p-2 rounded" type="number" step="0.1" value={inputs.solarMWp}
+        <label className="flex flex-col text-sm font-bold">Solar (MWp)
+          <input className="border p-2 rounded font-normal" type="number" step="0.1" value={inputs.solarMWp}
             onChange={e => updateInputs('solarMWp', Number(e.target.value))} />
         </label>
-        <label className="flex flex-col text-sm">Wind (MW)
-          <input className="border p-2 rounded" type="number" step="0.1" value={inputs.windMW}
+        <label className="flex flex-col text-sm font-bold">Wind (MW)
+          <input className="border p-2 rounded font-normal" type="number" step="0.1" value={inputs.windMW}
             onChange={e => updateInputs('windMW', Number(e.target.value))} />
         </label>
 
-        <label className="flex flex-col text-sm">Value $/kWh
-          <input className="border p-2 rounded" type="number" step="0.01" value={inputs.valuePerKWh}
+        <label className="flex flex-col text-sm font-bold">Value $/kWh
+          <input className="border p-2 rounded font-normal" type="number" step="0.01" value={inputs.valuePerKWh}
             onChange={e => updateInputs('valuePerKWh', Number(e.target.value))} />
         </label>
 
-        <label className="flex items-center gap-2 text-sm">
+        <label className="flex items-center gap-2 text-sm font-bold">
           <span>Utilization (0–1)</span>
-          <input className="border p-2 rounded flex-1" type="number" step="0.05" value={inputs.utilization}
+          <input className="border p-2 rounded flex-1 font-normal" type="number" step="0.05" value={inputs.utilization}
             onChange={e => updateInputs('utilization', Number(e.target.value))} />
         </label>
 
-        <label className="flex flex-col text-sm">Warranty
-          <select className="border p-2 rounded" value={inputs.warrantyYears}
+        <label className="flex flex-col text-sm font-bold">Warranty
+          <select className="border p-2 rounded font-normal" value={inputs.warrantyYears}
             onChange={e => updateInputs('warrantyYears', Number(e.target.value) as 10 | 20)}>
             <option value={10}>10 years</option>
             <option value={20}>20 years (+10%)</option>
           </select>
         </label>
 
-        <label className="flex flex-col text-sm">Location (Tariff Region)
-          <select className="border p-2 rounded" value={inputs.locationRegion}
+        <label className="flex flex-col text-sm font-bold">Location (Tariff Region)
+          <select className="border p-2 rounded font-normal" value={inputs.locationRegion}
             onChange={e => updateInputs('locationRegion', e.target.value as Region)}>
             <option value="US">US (2%)</option>
             <option value="UK">UK (6%)</option>
@@ -1142,7 +1142,7 @@ export default function BessQuoteBuilder() {
           </select>
         </label>
 
-        <label className="flex items-center gap-2 text-sm">
+        <label className="flex items-center gap-2 text-sm font-bold">
           <input type="checkbox" className="h-4 w-4"
             checked={inputs.pcsSeparate}
             onChange={e => updateInputs('pcsSeparate', e.target.checked)} />
@@ -1150,7 +1150,7 @@ export default function BessQuoteBuilder() {
         </label>
 
         <div className="col-span-2 border rounded p-3">
-          <label className="flex items-center gap-2 text-sm">
+          <label className="flex items-center gap-2 text-sm font-bold">
             <input type="checkbox" className="h-4 w-4"
               checked={inputs.budgetKnown}
               onChange={e => updateInputs('budgetKnown', e.target.checked)} />
@@ -1158,8 +1158,8 @@ export default function BessQuoteBuilder() {
           </label>
           {inputs.budgetKnown && (
             <div className="mt-2">
-              <label className="flex items-center gap-2 text-sm">Budget (USD)
-                <input className="border p-2 rounded flex-1" type="number" step="1000"
+              <label className="flex items-center gap-2 text-sm font-bold">Budget (USD)
+                <input className="border p-2 rounded flex-1 font-normal" type="number" step="1000"
                   value={inputs.budgetAmount ?? 0}
                   onChange={e => updateInputs('budgetAmount', Number(e.target.value))} />
               </label>
