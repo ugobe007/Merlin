@@ -1521,20 +1521,35 @@ export default function BessQuoteBuilder() {
                     setShowSavePrompt(false);
                     setShowUserProfile(true);
                   }}
-                  className="w-full bg-gradient-to-r from-purple-600 to-blue-600 text-white px-6 py-4 rounded-xl font-semibold hover:from-purple-700 hover:to-blue-700 transition-all duration-200 flex items-center justify-center gap-3 shadow-lg hover:shadow-xl transform hover:scale-[1.02]"
+                  className="w-full bg-gradient-to-r from-green-400 to-blue-500 text-white px-6 py-4 rounded-xl font-semibold hover:from-green-500 hover:to-blue-600 transition-all duration-200 flex items-center justify-center gap-3 shadow-lg hover:shadow-xl transform hover:scale-[1.02]"
                 >
-                  <span className="text-xl">🚀</span>
-                  <span>Sign Up / Log In to Save to Cloud</span>
+                  <span className="text-xl">📝</span>
+                  <span>Sign Up</span>
                 </button>
-                
+
                 <button
                   onClick={() => {
                     setShowSavePrompt(false);
+                    setShowUserProfile(true);
                   }}
-                  className="w-full border-2 border-gray-200 text-gray-600 px-6 py-3 rounded-xl hover:bg-gray-50 hover:border-gray-300 transition-all duration-200 font-medium"
+                  className="w-full bg-gradient-to-r from-purple-500 to-blue-600 text-white px-6 py-4 rounded-xl font-semibold hover:from-purple-600 hover:to-blue-700 transition-all duration-200 flex items-center justify-center gap-3 shadow-lg hover:shadow-xl transform hover:scale-[1.02]"
                 >
-                  Continue with Local Storage
+                  <span className="text-xl">🔑</span>
+                  <span>Log In</span>
                 </button>
+
+                {localStorage.getItem('auth_token') && (
+                  <button
+                    onClick={() => {
+                      setShowSavePrompt(false);
+                      setShowPortfolio(true);
+                    }}
+                    className="w-full bg-gradient-to-r from-blue-400 to-purple-500 text-white px-6 py-4 rounded-xl font-semibold hover:from-blue-500 hover:to-purple-600 transition-all duration-200 flex items-center justify-center gap-3 shadow-lg hover:shadow-xl transform hover:scale-[1.02]"
+                  >
+                    <span className="text-xl">📁</span>
+                    <span>View My Portfolio</span>
+                  </button>
+                )}
               </div>
               
               <p className="text-xs text-gray-500 text-center mt-4 px-2">
@@ -1686,14 +1701,14 @@ export default function BessQuoteBuilder() {
             {/* Header */}
             <div className="bg-gradient-to-r from-red-50 to-orange-50 p-6 rounded-t-xl border-b border-red-100">
               <div className="text-center">
-                <div className="w-16 h-16 mx-auto mb-4 bg-red-100 rounded-full flex items-center justify-center">
-                  <span className="text-3xl">⚠️</span>
+                <div className="w-16 h-16 mx-auto mb-4 bg-green-100 rounded-full flex items-center justify-center">
+                  <span className="text-3xl">💾</span>
                 </div>
                 <h2 className="text-2xl font-bold text-gray-800 mb-2">
-                  Connection Error
+                  Save Your Quote
                 </h2>
                 <p className="text-gray-600">
-                  Unable to save to Portfolio due to a connection issue
+                  Log in or sign up to save your quote.
                 </p>
               </div>
             </div>
