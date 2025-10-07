@@ -1453,63 +1453,84 @@ export default function BessQuoteBuilder() {
 
       {/* Custom Save Prompt Modal */}
       {showSavePrompt && savePromptData && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-lg w-full border border-gray-100">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-green-50 to-blue-50 p-6 rounded-t-xl border-b border-gray-100">
+              <div className="text-center">
+                <div className="w-16 h-16 mx-auto mb-4 bg-green-100 rounded-full flex items-center justify-center">
+                  <span className="text-3xl">💾</span>
+                </div>
+                <h2 className="text-2xl font-bold text-gray-800 mb-2">
+                  Quote Saved Successfully!
+                </h2>
+                <p className="text-gray-600">
+                  "{savePromptData.projectName}" is now saved on this device
+                </p>
+              </div>
+            </div>
+
+            {/* Content */}
             <div className="p-6">
               <div className="text-center mb-6">
-                <div className="text-6xl mb-4">💾</div>
-                <h2 className="text-xl font-bold text-gray-800 mb-2">
-                  Project "{savePromptData.projectName}" Saved Locally!
-                </h2>
-                <p className="text-gray-600 mb-4">
-                  Your quote is saved on this device. Create an account to unlock more features:
+                <p className="text-lg text-gray-700 mb-6">
+                  🚀 <strong>Upgrade to Cloud Storage</strong> for premium features:
                 </p>
-                <div className="text-left bg-blue-50 p-4 rounded-lg mb-6">
-                  <ul className="text-sm text-gray-700 space-y-2">
-                    <li className="flex items-center">
-                      <span className="text-green-600 mr-2">✓</span>
-                      Save quotes permanently to your Portfolio
-                    </li>
-                    <li className="flex items-center">
-                      <span className="text-green-600 mr-2">✓</span>
-                      Access quotes from any device
-                    </li>
-                    <li className="flex items-center">
-                      <span className="text-green-600 mr-2">✓</span>
-                      Export professional quotes with your branding
-                    </li>
-                    <li className="flex items-center">
-                      <span className="text-green-600 mr-2">✓</span>
-                      Share quotes with your team
-                    </li>
-                  </ul>
+                
+                <div className="bg-gradient-to-br from-blue-50 to-purple-50 p-5 rounded-xl border border-blue-100 mb-6">
+                  <div className="grid grid-cols-1 gap-3 text-sm">
+                    <div className="flex items-center">
+                      <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center mr-3">
+                        <span className="text-white text-xs">✓</span>
+                      </div>
+                      <span className="text-gray-700"><strong>Portfolio Management</strong> - Save unlimited quotes</span>
+                    </div>
+                    <div className="flex items-center">
+                      <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center mr-3">
+                        <span className="text-white text-xs">✓</span>
+                      </div>
+                      <span className="text-gray-700"><strong>Multi-Device Access</strong> - Work from anywhere</span>
+                    </div>
+                    <div className="flex items-center">
+                      <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center mr-3">
+                        <span className="text-white text-xs">✓</span>
+                      </div>
+                      <span className="text-gray-700"><strong>Professional Exports</strong> - Custom branding</span>
+                    </div>
+                    <div className="flex items-center">
+                      <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center mr-3">
+                        <span className="text-white text-xs">✓</span>
+                      </div>
+                      <span className="text-gray-700"><strong>Team Collaboration</strong> - Share with colleagues</span>
+                    </div>
+                  </div>
                 </div>
               </div>
               
-              <div className="flex flex-col gap-3">
+              <div className="space-y-3">
                 <button
                   onClick={() => {
                     setShowSavePrompt(false);
                     setShowUserProfile(true);
                   }}
-                  className="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:from-purple-700 hover:to-blue-700 transition-all flex items-center justify-center gap-2"
+                  className="w-full bg-gradient-to-r from-purple-600 to-blue-600 text-white px-6 py-4 rounded-xl font-semibold hover:from-purple-700 hover:to-blue-700 transition-all duration-200 flex items-center justify-center gap-3 shadow-lg hover:shadow-xl transform hover:scale-[1.02]"
                 >
-                  <span>🚀</span>
-                  Create Account & Save to Portfolio
+                  <span className="text-xl">🚀</span>
+                  <span>Create Free Account & Save to Cloud</span>
                 </button>
                 
                 <button
                   onClick={() => {
                     setShowSavePrompt(false);
                   }}
-                  className="border border-gray-300 text-gray-700 px-6 py-2 rounded-lg hover:bg-gray-50 transition-colors"
+                  className="w-full border-2 border-gray-200 text-gray-600 px-6 py-3 rounded-xl hover:bg-gray-50 hover:border-gray-300 transition-all duration-200 font-medium"
                 >
-                  Continue with Local Save Only
+                  Continue with Local Storage
                 </button>
               </div>
               
-              <p className="text-xs text-gray-500 text-center mt-4">
-                Already have an account? Click "Create Account" to log in instead.
+              <p className="text-xs text-gray-500 text-center mt-4 px-2">
+                🔒 Already have an account? The button above will let you log in instead. • Free forever, no credit card required.
               </p>
             </div>
           </div>
@@ -1518,32 +1539,50 @@ export default function BessQuoteBuilder() {
 
       {/* Session Expired Modal */}
       {showSessionExpired && savePromptData && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
-            <div className="p-6">
-              <div className="text-center mb-6">
-                <div className="text-6xl mb-4">⚠️</div>
-                <h2 className="text-xl font-bold text-gray-800 mb-2">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full border border-red-100">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-orange-50 to-red-50 p-6 rounded-t-xl border-b border-red-100">
+              <div className="text-center">
+                <div className="w-16 h-16 mx-auto mb-4 bg-orange-100 rounded-full flex items-center justify-center">
+                  <span className="text-3xl">⚠️</span>
+                </div>
+                <h2 className="text-2xl font-bold text-gray-800 mb-2">
                   Session Expired
                 </h2>
-                <p className="text-gray-600 mb-4">
-                  Your session has expired! "{savePromptData.projectName}" is saved locally, but we couldn't save it to your Portfolio.
-                </p>
                 <p className="text-gray-600">
+                  Your session has expired and needs to be renewed
+                </p>
+              </div>
+            </div>
+
+            {/* Content */}
+            <div className="p-6">
+              <div className="text-center mb-6">
+                <div className="bg-blue-50 p-4 rounded-xl border border-blue-200 mb-6">
+                  <p className="text-gray-700 mb-2">
+                    <strong>📋 "{savePromptData.projectName}"</strong> is safely saved locally
+                  </p>
+                  <p className="text-sm text-gray-600">
+                    We couldn't save it to your Portfolio due to an expired session
+                  </p>
+                </div>
+                
+                <p className="text-gray-700 mb-6">
                   Would you like to log in again to save this quote to your Portfolio?
                 </p>
               </div>
               
-              <div className="flex flex-col gap-3">
+              <div className="space-y-3">
                 <button
                   onClick={() => {
                     setShowSessionExpired(false);
                     setShowUserProfile(true);
                   }}
-                  className="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:from-purple-700 hover:to-blue-700 transition-all flex items-center justify-center gap-2"
+                  className="w-full bg-gradient-to-r from-purple-600 to-blue-600 text-white px-6 py-4 rounded-xl font-semibold hover:from-purple-700 hover:to-blue-700 transition-all duration-200 flex items-center justify-center gap-3 shadow-lg hover:shadow-xl transform hover:scale-[1.02]"
                 >
-                  <span>🔐</span>
-                  Log In Again
+                  <span className="text-xl">🔐</span>
+                  <span>Log In Again & Save to Portfolio</span>
                 </button>
                 
                 <button
@@ -1552,9 +1591,9 @@ export default function BessQuoteBuilder() {
                     setPendingSave(null);
                     setSavePromptData(null);
                   }}
-                  className="border border-gray-300 text-gray-700 px-6 py-2 rounded-lg hover:bg-gray-50 transition-colors"
+                  className="w-full border-2 border-gray-200 text-gray-600 px-6 py-3 rounded-xl hover:bg-gray-50 hover:border-gray-300 transition-all duration-200 font-medium"
                 >
-                  Continue with Local Save
+                  Continue with Local Storage
                 </button>
               </div>
             </div>
@@ -1564,36 +1603,57 @@ export default function BessQuoteBuilder() {
 
       {/* Save Success Modal */}
       {showSaveSuccess && savePromptData && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
-            <div className="p-6">
-              <div className="text-center mb-6">
-                <div className="text-6xl mb-4">🎉</div>
-                <h2 className="text-xl font-bold text-gray-800 mb-2">
-                  {pendingSave ? 'Welcome!' : 'Success!'}
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full border border-green-100">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-green-50 to-emerald-50 p-6 rounded-t-xl border-b border-green-100">
+              <div className="text-center">
+                <div className="w-16 h-16 mx-auto mb-4 bg-green-100 rounded-full flex items-center justify-center">
+                  <span className="text-3xl">{pendingSave ? '🎉' : '✅'}</span>
+                </div>
+                <h2 className="text-2xl font-bold text-gray-800 mb-2">
+                  {pendingSave ? 'Welcome to Merlin!' : 'Portfolio Updated!'}
                 </h2>
-                <p className="text-gray-600 mb-4">
+                <p className="text-gray-600">
                   {pendingSave 
-                    ? `Welcome! Your quote "${savePromptData.projectName}" has been saved to your Portfolio!`
-                    : `Project "${savePromptData.projectName}" saved successfully to your Portfolio!`
+                    ? 'Your account is ready and your quote is saved'
+                    : 'Your quote has been saved successfully'
                   }
                 </p>
-                <p className="text-gray-600">
+              </div>
+            </div>
+
+            {/* Content */}
+            <div className="p-6">
+              <div className="text-center mb-6">
+                <div className="bg-blue-50 p-4 rounded-xl border border-blue-200 mb-6">
+                  <p className="text-gray-700 font-semibold mb-1">
+                    📋 "{savePromptData.projectName}"
+                  </p>
+                  <p className="text-sm text-gray-600">
+                    {pendingSave 
+                      ? 'Welcome! Your quote has been saved to your Portfolio!'
+                      : 'Successfully saved to your Portfolio'
+                    }
+                  </p>
+                </div>
+                
+                <p className="text-gray-700 mb-6">
                   Would you like to view your Portfolio now?
                 </p>
               </div>
               
-              <div className="flex flex-col gap-3">
+              <div className="space-y-3">
                 <button
                   onClick={() => {
                     setShowSaveSuccess(false);
                     setShowPortfolio(true);
                     setSavePromptData(null);
                   }}
-                  className="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:from-purple-700 hover:to-blue-700 transition-all flex items-center justify-center gap-2"
+                  className="w-full bg-gradient-to-r from-purple-600 to-blue-600 text-white px-6 py-4 rounded-xl font-semibold hover:from-purple-700 hover:to-blue-700 transition-all duration-200 flex items-center justify-center gap-3 shadow-lg hover:shadow-xl transform hover:scale-[1.02]"
                 >
-                  <span>📁</span>
-                  View My Portfolio
+                  <span className="text-xl">📁</span>
+                  <span>View My Portfolio</span>
                 </button>
                 
                 <button
@@ -1601,7 +1661,7 @@ export default function BessQuoteBuilder() {
                     setShowSaveSuccess(false);
                     setSavePromptData(null);
                   }}
-                  className="border border-gray-300 text-gray-700 px-6 py-2 rounded-lg hover:bg-gray-50 transition-colors"
+                  className="w-full border-2 border-gray-200 text-gray-600 px-6 py-3 rounded-xl hover:bg-gray-50 hover:border-gray-300 transition-all duration-200 font-medium"
                 >
                   Continue Working
                 </button>
