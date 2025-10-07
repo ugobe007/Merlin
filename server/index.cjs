@@ -31,7 +31,8 @@ app.use(cors({
     'http://localhost:5177',
     'http://localhost:5178', // Current Vite dev server
     'http://localhost:3000',
-    'http://localhost:8080'
+    'http://localhost:8080',
+    'https://merlin.fly.dev' // Production domain
   ],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
