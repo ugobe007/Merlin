@@ -1078,13 +1078,15 @@ export default function BessQuoteBuilder() {
           </select>
         </label>
 
-        <label className="flex flex-col text-sm font-bold">Location (Tariff Region)
-          <select className="border p-2 rounded font-normal" value={inputs.locationRegion}
+        <label className="flex flex-col text-sm font-bold">
+          🌍 Location (Tariff Region)
+          <select className="w-full border-2 border-blue-300 rounded-lg px-4 py-3 bg-white text-gray-800 font-semibold shadow-sm hover:border-blue-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all" 
+            value={inputs.locationRegion}
             onChange={e => updateInputs('locationRegion', e.target.value as Region)}>
-            <option value="US">US (2%)</option>
-            <option value="UK">UK (6%)</option>
-            <option value="EU">EU (5%)</option>
-            <option value="Other">Other (8%)</option>
+            <option value="US" className="font-semibold">US (2%)</option>
+            <option value="UK" className="font-semibold">UK (6%)</option>
+            <option value="EU" className="font-semibold">EU (5%)</option>
+            <option value="Other" className="font-semibold">Other (8%)</option>
           </select>
         </label>
 
