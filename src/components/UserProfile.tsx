@@ -94,6 +94,12 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, onLoadQuote 
       setError(null);
       
       const token = localStorage.getItem('auth_token');
+      console.log('Profile fetch - Token exists:', !!token);
+      console.log('Profile fetch - Token preview:', token ? token.substring(0, 20) + '...' : 'No token');
+      
+      if (!token) {
+        throw new Error('No authentication token found');
+      }
       
       const response = await fetch('https://merlin.fly.dev/api/auth/profile', {
         method: 'GET',
@@ -103,11 +109,17 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, onLoadQuote 
         },
       });
 
+      console.log('Profile fetch - Response status:', response.status);
+      console.log('Profile fetch - Response ok:', response.ok);
+
       if (!response.ok) {
+        const errorText = await response.text();
+        console.log('Profile fetch - Error response:', errorText);
         throw new Error(`Failed to load profile: ${response.status}`);
       }
 
       const data = await response.json();
+      console.log('Profile fetch - Success data:', data);
       setUser(data);
       setProfileForm({
         first_name: data.first_name || '',
