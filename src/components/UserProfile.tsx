@@ -83,6 +83,12 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, onLoadQuote 
   const fetchProfile = async () => {
     try {
       setLoading(true);
+      
+      const token = localStorage.getItem('auth_token');
+      console.log('Fetching profile with token:', token ? 'Token exists' : 'No token');
+      console.log('API_BASE:', API_BASE);
+      console.log('Request URL:', `${API_BASE}/api/auth/profile`);
+      
       const response = await fetch(`${API_BASE}/api/auth/profile`, {
         headers: {
           'Content-Type': 'application/json',
@@ -90,8 +96,11 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, onLoadQuote 
         }
       });
 
+      console.log('Profile fetch response status:', response.status);
+      
       if (response.ok) {
         const data = await response.json();
+        console.log('Profile data received:', data);
         setUser(data.user);
         setProfileForm({
           first_name: data.user.first_name || '',
@@ -102,7 +111,19 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, onLoadQuote 
           linkedin: data.user.linkedin || ''
         });
       } else {
-        throw new Error('Failed to fetch profile');
+        const errorText = await response.text();
+        console.log('Profile fetch failed:', response.status, errorText);
+        
+        // If token is invalid, log user out
+        if (response.status === 401 || response.status === 403) {
+          console.log('Invalid token, logging out user');
+          localStorage.removeItem('auth_token');
+          setIsLoggedIn(false);
+          setUser(null);
+          return;
+        }
+        
+        throw new Error(`Failed to fetch profile: ${response.status}`);
       }
     } catch (err) {
       console.error('Profile fetch error:', err);

@@ -122,8 +122,17 @@ router.post('/login', async (req, res) => {
 // Get current user profile
 router.get('/profile', authenticateToken, (req, res) => {
   try {
+    console.log('[profile] User ID from token:', req.user.userId);
+    console.log('[profile] User email from token:', req.user.email);
+    
     const user = req.db.getUserById(req.user.userId);
+    console.log('[profile] User found in database:', user ? 'Yes' : 'No');
+    
     if (!user) {
+      console.log('[profile] User not found, checking all users...');
+      // Debug: Check if user exists at all
+      const userByEmail = req.db.getUserByEmail(req.user.email);
+      console.log('[profile] User found by email:', userByEmail ? 'Yes' : 'No');
       return res.status(404).json({ error: 'User not found' });
     }
 
