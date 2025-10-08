@@ -61,6 +61,8 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, onLoadQuote,
     title: '',
     linkedin: ''
   });
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState('');
 
   // EMERGENCY FIX: Force cache bust and absolute URLs
   const API_BASE = '';
@@ -369,6 +371,34 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, onLoadQuote,
     }
   };
 
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      setLoading(true);
+      setError(null);
+
+      const response = await fetch(`${API_BASE}/api/auth/forgot-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: forgotEmail })
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        alert('Password reset instructions sent to your email.');
+        setShowForgotPassword(false);
+        setForgotEmail('');
+      } else {
+        setError(data.error || 'Failed to send reset instructions');
+      }
+    } catch (err) {
+      setError('Failed to send reset instructions. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -392,149 +422,123 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, onLoadQuote,
 
         {!isLoggedIn ? (
           <div className="space-y-6">
-            {!showRegister ? (
-              <form onSubmit={handleLogin} className="space-y-4">
-                <h3 className="text-lg font-semibold">Sign In</h3>
-                <div>
-                  <label className="block text-sm font-medium mb-1">Email</label>
-                  <input
-                    type="email"
-                    value={loginForm.email}
-                    onChange={(e) => setLoginForm({...loginForm, email: e.target.value})}
-                    className="w-full border border-gray-300 rounded px-3 py-2"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">Password</label>
-                  <input
-                    type="password"
-                    value={loginForm.password}
-                    onChange={(e) => setLoginForm({...loginForm, password: e.target.value})}
-                    className="w-full border border-gray-300 rounded px-3 py-2"
-                    required
-                  />
-                </div>
+            <form onSubmit={handleLogin} className="space-y-4">
+              <h3 className="text-lg font-semibold">Sign In</h3>
+              <div>
+                <label className="block text-sm font-medium mb-1">Email</label>
+                <input
+                  type="email"
+                  value={loginForm.email}
+                  onChange={e => setLoginForm({...loginForm, email: e.target.value})}
+                  className="w-full border border-gray-300 rounded px-3 py-2"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Password</label>
+                <input
+                  type="password"
+                  value={loginForm.password}
+                  onChange={e => setLoginForm({...loginForm, password: e.target.value})}
+                  className="w-full border border-gray-300 rounded px-3 py-2"
+                  required
+                />
+              </div>
+              <div className="flex justify-between items-center">
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700 disabled:opacity-50"
+                  className="bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700 disabled:opacity-50"
                 >
                   {loading ? 'Signing In...' : 'Sign In'}
                 </button>
-                <p className="text-center">
-                  Don't have an account?{' '}
-                  <button
-                    type="button"
-                    onClick={() => setShowRegister(true)}
-                    className="text-blue-600 hover:underline"
-                  >
-                    Sign Up
-                  </button>
-                </p>
-              </form>
-            ) : (
-              <>
-                <h3 className="text-lg font-semibold">Create Account</h3>
-                
-                <form onSubmit={handleRegister} className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium mb-1">First Name</label>
-                    <input
-                      type="text"
-                      value={registerForm.first_name}
-                      onChange={(e) => setRegisterForm({...registerForm, first_name: e.target.value})}
-                      className="w-full border border-gray-300 rounded px-3 py-2"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-1">Last Name</label>
-                    <input
-                      type="text"
-                      value={registerForm.last_name}
-                      onChange={(e) => setRegisterForm({...registerForm, last_name: e.target.value})}
-                      className="w-full border border-gray-300 rounded px-3 py-2"
-                    />
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">Email *</label>
-                  <input
-                    type="email"
-                    value={registerForm.email}
-                    onChange={(e) => setRegisterForm({...registerForm, email: e.target.value})}
-                    className="w-full border border-gray-300 rounded px-3 py-2"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">Password *</label>
-                  <input
-                    type="password"
-                    value={registerForm.password}
-                    onChange={(e) => setRegisterForm({...registerForm, password: e.target.value})}
-                    className="w-full border border-gray-300 rounded px-3 py-2"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">Company</label>
-                  <input
-                    type="text"
-                    value={registerForm.company}
-                    onChange={(e) => setRegisterForm({...registerForm, company: e.target.value})}
-                    className="w-full border border-gray-300 rounded px-3 py-2"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">Phone</label>
-                  <input
-                    type="tel"
-                    value={registerForm.phone}
-                    onChange={(e) => setRegisterForm({...registerForm, phone: e.target.value})}
-                    className="w-full border border-gray-300 rounded px-3 py-2"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">Title/Position</label>
-                  <input
-                    type="text"
-                    value={registerForm.title}
-                    onChange={(e) => setRegisterForm({...registerForm, title: e.target.value})}
-                    placeholder="e.g., Project Manager, Engineer, Director"
-                    className="w-full border border-gray-300 rounded px-3 py-2"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">LinkedIn Profile</label>
-                  <input
-                    type="url"
-                    value={registerForm.linkedin}
-                    onChange={(e) => setRegisterForm({...registerForm, linkedin: e.target.value})}
-                    placeholder="https://linkedin.com/in/yourprofile"
-                    className="w-full border border-gray-300 rounded px-3 py-2"
-                  />
-                </div>
                 <button
-                  type="submit"
-                  disabled={loading}
-                  className="w-full bg-green-600 text-white py-2 px-4 rounded hover:bg-green-700 disabled:opacity-50"
+                  type="button"
+                  className="text-blue-600 hover:underline text-sm"
+                  onClick={() => setShowForgotPassword(true)}
                 >
-                  {loading ? 'Creating Account...' : 'Create Account'}
+                  Forgot password?
                 </button>
-                <p className="text-center">
-                  Already have an account?{' '}
-                  <button
-                    type="button"
-                    onClick={() => setShowRegister(false)}
-                    className="text-blue-600 hover:underline"
-                  >
-                    Sign In
-                  </button>
-                </p>
-              </form>
-              </>
+              </div>
+              <p className="text-center">
+                Don't have an account?{' '}
+                <button
+                  type="button"
+                  onClick={() => setShowRegister(true)}
+                  className="text-blue-600 hover:underline"
+                >
+                  Sign Up
+                </button>
+              </p>
+            </form>
+
+            {!showRegister && (
+              <div className="flex items-center justify-center min-h-[60vh]">
+                <div className="bg-gradient-to-br from-blue-50 via-purple-50 to-white rounded-2xl shadow-2xl border border-blue-100 max-w-lg w-full p-8">
+                  <div className="flex flex-col items-center mb-6">
+                    <div className="w-16 h-16 bg-gradient-to-br from-green-400 to-blue-400 rounded-full flex items-center justify-center mb-3 shadow-lg">
+                      <User size={36} className="text-white" />
+                    </div>
+                    <h2 className="text-2xl font-bold text-blue-700 mb-1">Create Your Merlin Account</h2>
+                    <p className="text-md text-gray-600">Sign up to save quotes, access your portfolio, and collaborate with your team.</p>
+                  </div>
+                  <ul className="mb-6 grid grid-cols-2 gap-2 text-sm">
+                    <li className="flex items-center gap-2 text-green-700"><span className="text-lg">✓</span> Unlimited Quotes</li>
+                    <li className="flex items-center gap-2 text-blue-700"><span className="text-lg">✓</span> Multi-Device Access</li>
+                    <li className="flex items-center gap-2 text-purple-700"><span className="text-lg">✓</span> Team Collaboration</li>
+                    <li className="flex items-center gap-2 text-yellow-700"><span className="text-lg">✓</span> Professional Exports</li>
+                  </ul>
+                  <form onSubmit={handleRegister} className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium mb-1 text-blue-700">First Name</label>
+                        <input type="text" value={registerForm.first_name} onChange={e => setRegisterForm({...registerForm, first_name: e.target.value})} className="w-full border border-blue-200 rounded-lg px-3 py-2 bg-white focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all" />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium mb-1 text-blue-700">Last Name</label>
+                        <input type="text" value={registerForm.last_name} onChange={e => setRegisterForm({...registerForm, last_name: e.target.value})} className="w-full border border-blue-200 rounded-lg px-3 py-2 bg-white focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all" />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-1 text-blue-700">Email *</label>
+                      <div className="relative">
+                        <input type="email" value={registerForm.email} onChange={e => setRegisterForm({...registerForm, email: e.target.value})} className="w-full border border-blue-200 rounded-lg px-3 py-2 pl-10 bg-white focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all" required />
+                        <span className="absolute left-3 top-2.5 text-blue-400"><User size={18} /></span>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-1 text-blue-700">Password *</label>
+                      <div className="relative">
+                        <input type="password" value={registerForm.password} onChange={e => setRegisterForm({...registerForm, password: e.target.value})} className="w-full border border-blue-200 rounded-lg px-3 py-2 pl-10 bg-white focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all" required />
+                        <span className="absolute left-3 top-2.5 text-blue-400"><Save size={18} /></span>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-1 text-blue-700">Company</label>
+                      <input type="text" value={registerForm.company} onChange={e => setRegisterForm({...registerForm, company: e.target.value})} className="w-full border border-blue-200 rounded-lg px-3 py-2 bg-white focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-1 text-blue-700">Phone</label>
+                      <input type="tel" value={registerForm.phone} onChange={e => setRegisterForm({...registerForm, phone: e.target.value})} className="w-full border border-blue-200 rounded-lg px-3 py-2 bg-white focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-1 text-blue-700">Title/Position</label>
+                      <input type="text" value={registerForm.title} onChange={e => setRegisterForm({...registerForm, title: e.target.value})} placeholder="e.g., Project Manager, Engineer, Director" className="w-full border border-blue-200 rounded-lg px-3 py-2 bg-white focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-1 text-blue-700">LinkedIn Profile</label>
+                      <input type="url" value={registerForm.linkedin} onChange={e => setRegisterForm({...registerForm, linkedin: e.target.value})} placeholder="https://linkedin.com/in/yourprofile" className="w-full border border-blue-200 rounded-lg px-3 py-2 bg-white focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all" />
+                    </div>
+                    <button type="submit" disabled={loading} className="w-full bg-gradient-to-r from-green-400 to-blue-500 text-white py-3 px-4 rounded-xl font-semibold shadow-lg hover:from-green-500 hover:to-blue-600 transition-all duration-200 flex items-center justify-center gap-3">
+                      {loading ? 'Creating Account...' : <><Save size={20} className="mr-2" />Create Account</>}
+                    </button>
+                    <p className="text-center mt-4">
+                      Already have an account?{' '}
+                      <button type="button" onClick={() => setShowRegister(false)} className="text-blue-600 hover:underline font-semibold">Sign In</button>
+                    </p>
+                  </form>
+                </div>
+              </div>
             )}
           </div>
         ) : (
@@ -839,6 +843,40 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, onLoadQuote,
                 )}
               </div>
             )}
+          </div>
+        )}
+
+        {showForgotPassword && (
+          <div className="flex items-center justify-center min-h-[40vh]">
+            <div className="bg-white rounded-2xl shadow-xl border border-blue-100 max-w-md w-full p-8">
+              <h2 className="text-xl font-bold text-blue-700 mb-2 text-center">Forgot Password?</h2>
+              <p className="text-gray-600 mb-4 text-center">Enter your email address and we'll send you instructions to reset your password.</p>
+              <form onSubmit={handleForgotPassword} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1">Email Address</label>
+                  <input
+                    type="email"
+                    value={forgotEmail}
+                    onChange={e => setForgotEmail(e.target.value)}
+                    className="w-full border border-blue-200 rounded-lg px-3 py-2 bg-white focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all"
+                    required
+                  />
+                </div>
+                <button
+                  type="submit"
+                  className="w-full bg-gradient-to-r from-blue-400 to-green-400 text-white py-2 px-4 rounded-xl font-semibold shadow-lg hover:from-blue-500 hover:to-green-500 transition-all duration-200"
+                >
+                  Send Reset Instructions
+                </button>
+                <button
+                  type="button"
+                  className="w-full mt-2 text-blue-600 hover:underline text-sm"
+                  onClick={() => setShowForgotPassword(false)}
+                >
+                  Back to Sign In
+                </button>
+              </form>
+            </div>
           </div>
         )}
       </div>

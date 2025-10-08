@@ -8,6 +8,20 @@ import Portfolio from './Portfolio'
 import { parseVendorQuoteFile } from '../utils/fileParser'
 import { playMagicWandSound } from '../utils/magicSound'
 
+export function AssumptionNumber({ label, value, onChange, step = 1 }: { label: string; value: number; onChange: (v: number) => void; step?: number }) {
+  return (
+    <label className="flex items-center justify-between gap-2">
+      <span className="text-sm">{label}</span>
+      <input
+        className="border p-2 rounded w-40 text-right"
+        type="number"
+        step={step}
+        value={value}
+        onChange={e => onChange(Number(e.target.value))}
+      />
+    </label>
+  );
+
 
 type Region = 'US' | 'UK' | 'EU' | 'Other'
 
@@ -211,99 +225,73 @@ function getBatteryTariffByCountry(countryName: string): number {
 }
 
 export default function BessQuoteBuilder() {
+  // Handler for smart configuration button in wizard
+  function generateSmartConfiguration() {
+    // Example: apply smart config based on wizardData
+    handleSmartConfig(
+      wizardData.primaryApplication || '',
+      wizardData.budgetRange || '',
+      wizardData.equipmentNeeded,
+      wizardData.powerMW,
+      wizardData
+    );
+    setShowSmartWizard(false);
+    alert('Smart configuration generated!');
+  }
+  // Handler for updating assumptions
+  function updateAssumption(key: keyof Assumptions, value: Assumptions[keyof Assumptions]) {
+    const next = { ...assm, [key]: value };
+    setAssm(next);
+    persistAssumptions(next);
+    setOut(calc(inputs, next));
+  }
   const [inputs, setInputs] = useState<Inputs>(() => {
-    const saved = localStorage.getItem('merlin_inputs')
+    const saved = localStorage.getItem('merlin_inputs');
     return saved ? JSON.parse(saved) : {
       powerMW: 1,
       standbyHours: 2,
       voltage: '800V',
-      gridMode: 'on-grid',
-      useCase: 'EV Charging Stations',
-      certifications: 'UL9540A',
-      generatorMW: 0,
-      solarMWp: 0,
-      windMW: 0,
-      utilization: 0.2,
-      valuePerKWh: 0.25,
-      warrantyYears: 10,
-      budgetKnown: false,
-      budgetAmount: undefined,
-      locationRegion: 'US' as Region,
-      pcsSeparate: false,
-    }
-  })
-
-  const [assm, setAssm] = useState<Assumptions>(() => {
-    const saved = localStorage.getItem('merlin_assumptions')
-    return saved ? JSON.parse(saved) : DEFAULT_ASSUMPTIONS
-  })
-
-  const [projects, setProjects] = useState(loadAll())
-  const [projectName, setProjectName] = useState('My Quote')
-  const [busy, setBusy] = useState<'' | 'word' | 'excel'>('')
-  const [showVendorManager, setShowVendorManager] = useState(false)
-  const [showDatabaseTest, setShowDatabaseTest] = useState(false)
-  const [showUserProfile, setShowUserProfile] = useState(false)
-  const [showLoadProject, setShowLoadProject] = useState(false)
-  const [showPortfolio, setShowPortfolio] = useState(false)
-  const [currentPrice, setCurrentPrice] = useState<number | null>(0.12)
-  const [magicalExport, setMagicalExport] = useState(false)
-  const [pendingSave, setPendingSave] = useState<any>(null) // Store quote data pending save after login
-  const [showSavePrompt, setShowSavePrompt] = useState(false) // Custom save prompt modal
-  const [savePromptData, setSavePromptData] = useState<{projectName: string} | null>(null)
-  const [showSessionExpired, setShowSessionExpired] = useState(false) // Session expired modal
-  const [showSaveSuccess, setShowSaveSuccess] = useState(false) // Save success modal
-  const [showErrorModal, setShowErrorModal] = useState(false) // Error modal
-  const [showSmartWizard, setShowSmartWizard] = useState(false)
-  const [wizardStep, setWizardStep] = useState(1)
-  const [wizardData, setWizardData] = useState({
-    applications: [] as string[], // Changed to array for multiple selections
-    budgetRange: '',
-    powerNeeds: '',
-    powerMW: 1,
-    location: 'US' as Region,
-    hasExistingPower: false,
-    existingPowerType: '',
-    timeframe: '',
-    primaryGoal: '',
-    equipmentNeeded: {
-      bess: true,
-      powerGeneration: false,
       solar: false,
       wind: false,
       hybrid: false,
-      grid: true
-    },
-    gridConnection: 'behind', // 'front' or 'behind'
-    hybridConfig: {
-      generationMW: 1,
-      storageMWh: 2,
-      generationType: 'solar' // 'solar', 'wind', 'generator', 'mixed'
-    },
-    worldRegion: 'US' as Region, // for tariffs and shipping
-    shippingLocation: ''
-  })
+      grid: true,
+      gridConnection: 'behind', // 'front' or 'behind'
+      hybridConfig: {
+        generationMW: 1,
+        storageMWh: 2,
+        generationType: 'solar' // 'solar', 'wind', 'generator', 'mixed'
+      },
+      worldRegion: 'US' as Region, // for tariffs and shipping
+      shippingLocation: ''
+    };
+  });
+
+  const [showAdvancedInputs, setShowAdvancedInputs] = useState(false);
 
   // Enhanced debug logging function for thorough testing
   const debugLog = (action: string, data?: any) => {
     console.log(`🧪 TEST: ${action}`, data ? data : '');
-  }
+  };
 
   // persist inputs automatically
   useEffect(() => {
-    localStorage.setItem('merlin_inputs', JSON.stringify(inputs))
-  }, [inputs])
+    localStorage.setItem('merlin_inputs', JSON.stringify(inputs));
+  }, [inputs]);
 
-    // Set default price
+  // Set default price
   useEffect(() => {
-    setCurrentPrice(0.12) // $0.12/kWh default
-  }, [])
+    setCurrentPrice(0.12); // $0.12/kWh default
+  }, []);
 
-  const [out, setOut] = useState<Outputs>(() => calc(inputs, assm))
-  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [out, setOut] = useState<Outputs>(() => calc(inputs, assm));
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   function persistAssumptions(next: Assumptions) {
-    localStorage.setItem('merlin_assumptions', JSON.stringify(next))
+    localStorage.setItem('merlin_assumptions', JSON.stringify(next));
+  }
+
+  function updateInputs(key: keyof Inputs, value: any) {
+    setInputs(prev => ({ ...prev, [key]: value }));
   }
 
   function calc(i: Inputs, a: Assumptions): Outputs {
@@ -346,98 +334,15 @@ export default function BessQuoteBuilder() {
 
     const budgetDelta =
       i.budgetKnown && typeof i.budgetAmount === 'number'
-        ? i.budgetAmount - grandCapex
-        : undefined
-
-    return (
-      <div className="p-8 max-w-5xl mx-auto space-y-6">
-        {/* Advanced Inputs Modal */}
-        {showAdvancedInputs && (
-          <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
-            <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-2xl w-full relative">
-              <button
-                className="absolute top-4 right-4 text-gray-500 hover:text-gray-700 text-2xl font-bold"
-                onClick={() => setShowAdvancedInputs(false)}
-              >
-                &times;
-              </button>
-              <h2 className="text-xl font-bold mb-4 text-purple-700">Advanced Project Inputs</h2>
-              <div className="space-y-4">
-                <label className="block font-semibold">Upload Documentation (energy bills, meter data, etc.)
-                  <input type="file" multiple className="mt-2 block" />
-                </label>
-                <label className="block font-semibold">Average Daily Load (kWh)
-                  <input type="number" className="mt-2 border p-2 rounded w-full" />
-                </label>
-                <label className="block font-semibold">Peak Load (kW)
-                  <input type="number" className="mt-2 border p-2 rounded w-full" />
-                </label>
-                <label className="block font-semibold">Commercial Operating Hours
-                  <select className="mt-2 border p-2 rounded w-full">
-                    <option>24 / 7</option>
-                    <option>Daytime Only (8 am - 5pm)</option>
-                    <option>Other</option>
-                  </select>
-                </label>
-                {/* Add more advanced fields as needed */}
-              </div>
-            </div>
-          </div>
-        )}
-
-  function updateInputs(key, value) {
-  function updateInputs(key, value) {
-    const nextInputs = { ...inputs, [key]: value };
-    setInputs(nextInputs);
-    setOut(calc(nextInputs, assm));
-  }
-
-  function updateAssumption(key, value) {
-  function updateAssumption(key, value) {
-    const nextAssm = { ...assm, [key]: value };
-    setAssm(nextAssm);
-    persistAssumptions(nextAssm);
-    setOut(calc(inputs, nextAssm));
-  }
-
-  // Smart Wizard Logic
-  function generateSmartConfiguration() {
-    debugLog('🪄 generateSmartConfiguration called', wizardData);
-    const { applications, budgetRange, powerMW, equipmentNeeded, gridConnection, worldRegion } = wizardData;
-    // Initialize configuration based on application type and user inputs
-    let config = {
-      locationRegion: worldRegion, // Use tariff region instead of project location
-      gridMode: gridConnection === 'behind' ? 'on-grid' : 'off-grid',
-      powerMW: powerMW // Use the exact power specified by user
-    };
-    // Determine specific settings based on primary application
-    const primaryApplication = applications.length > 0 ? applications[0] : 'Custom Application';
+  // Smart configuration handler
+  function handleSmartConfig(primaryApplication: string, budgetRange: string, equipmentNeeded: any, powerMW: number, wizardData: any) {
+    let config: any = {};
     switch (primaryApplication) {
-      case 'EV Charging':
-        config = {
-          ...config,
-          standbyHours: 4,
-          useCase: 'EV Charging Stations',
-          utilization: 0.6,
-          valuePerKWh: 0.35
-        };
-        break;
-      case 'Industrial Backup':
-        config = {
-          ...config,
-          standbyHours: 8,
-          useCase: 'Industrial Backup',
-          utilization: 0.1,
-          valuePerKWh: 0.5
-        };
-        break;
       case 'Grid Stabilization':
         config = {
-          ...config,
-          standbyHours: 2,
           useCase: 'Grid Stabilization',
           utilization: 0.3,
-          valuePerKWh: 0.25
+          valuePerKWh: 0.25,
         };
         break;
       case 'Renewable Integration':
@@ -446,7 +351,7 @@ export default function BessQuoteBuilder() {
           standbyHours: 6,
           useCase: 'Renewable Integration',
           utilization: 0.4,
-          valuePerKWh: 0.2
+          valuePerKWh: 0.2,
         };
         break;
       case 'Peak Shaving':
@@ -455,7 +360,7 @@ export default function BessQuoteBuilder() {
           standbyHours: 3,
           useCase: 'Peak Shaving',
           utilization: 0.5,
-          valuePerKWh: 0.4
+          valuePerKWh: 0.4,
         };
         break;
       default:
@@ -464,7 +369,7 @@ export default function BessQuoteBuilder() {
           standbyHours: 4,
           useCase: 'General Purpose',
           utilization: 0.3,
-          valuePerKWh: 0.25
+          valuePerKWh: 0.25,
         };
     }
     // Configure additional equipment based on selections
@@ -534,24 +439,22 @@ export default function BessQuoteBuilder() {
       newInputs: nextInputs
     });
     setInputs(nextInputs);
-    setOut(calc(nextInputs, assm));
-    // Set project name based on configuration
-    setProjectName(`${primaryApplication} - ${config.powerMW}MW System`);
-    // Close wizard immediately - no need to wait
-    debugLog('Closing wizard and starting export');
-    setShowSmartWizard(false)
-    setWizardStep(1)
+    // setOut(calc(nextInputs, assm));
+    // setProjectName(`${primaryApplication} - ${config.powerMW}MW System`);
+    // debugLog('Closing wizard and starting export');
+    // setShowSmartWizard(false)
+    // setWizardStep(1)
     
     // Play magic sound and show brief feedback
     playMagicWandSound()
-    setMagicalExport(true)
-    setTimeout(() => setMagicalExport(false), 1500) // Shorter animation
+    // setMagicalExport(true)
+    // setTimeout(() => setMagicalExport(false), 1500) // Shorter animation
     
     // Start export immediately without waiting
     setTimeout(() => {
       console.log(`✨ BESS Configuration Generated! ✨`);
       console.log(`Project: ${primaryApplication} - ${config.powerMW}MW System`);
-      console.log(`Total Cost: $${calc(nextInputs, assm).grandCapex.toLocaleString()}`);
+      // console.log(`Total Cost: $${calc(nextInputs, assm).grandCapex.toLocaleString()}`);
       console.log('Auto-exporting to Word...');
       
       // Automatically export to Word
@@ -560,27 +463,27 @@ export default function BessQuoteBuilder() {
   }
 
   function applyOverrides(obj: any) {
-    const next: Assumptions = JSON.parse(JSON.stringify(assm))
-    for (const k of Object.keys(obj || {})) {
-      if (k === 'country' && typeof obj[k] === 'string') {
-        // Set country directly for tariff lookup
-        next.country = obj[k]
-      } else if (k === 'tariffByRegion') {
-        // Legacy support - ignore old tariffByRegion imports
-        console.log('Ignoring legacy tariffByRegion import - using country-based lookup instead')
-      } else if (k in next) {
-        const val = obj[k]
-        if (typeof (next as any)[k] === 'number') {
-          const n = Number(val)
-          if (!Number.isNaN(n)) (next as any)[k] = n
-        } else {
-          (next as any)[k] = val
-        }
-      }
-    }
-    setAssm(next)
-    persistAssumptions(next)
-    setOut(calc(inputs, next))
+    // const next: Assumptions = JSON.parse(JSON.stringify(assm))
+    // for (const k of Object.keys(obj || {})) {
+    //   if (k === 'country' && typeof obj[k] === 'string') {
+    //     // Set country directly for tariff lookup
+    //     next.country = obj[k]
+    //   } else if (k === 'tariffByRegion') {
+    //     // Legacy support - ignore old tariffByRegion imports
+    //     console.log('Ignoring legacy tariffByRegion import - using country-based lookup instead')
+    //   } else if (k in next) {
+    //     const val = obj[k]
+    //     if (typeof (next as any)[k] === 'number') {
+    //       const n = Number(val)
+    //       if (!Number.isNaN(n)) (next as any)[k] = n
+    //     } else {
+    //       (next as any)[k] = val
+    //     }
+    //   }
+    // }
+    // setAssm(next)
+    // persistAssumptions(next)
+    // setOut(calc(inputs, next))
   }
 
   async function handleOverridesFile(file: File) {
@@ -1061,9 +964,9 @@ export default function BessQuoteBuilder() {
           </div>
         </div>
       )}
-
+      {/* Main Content Wrapper */}
       <div className="p-8 max-w-5xl mx-auto space-y-6">
-      {/* Top Bar with User Profile and Price */}
+        {/* Top Bar with User Profile and Price */}
       <div className="flex justify-between items-center mb-4">
         <div className="flex items-center space-x-4">
           <button 
@@ -1078,12 +981,76 @@ export default function BessQuoteBuilder() {
               color: '#FDE047', 
               textShadow: '1px 1px 2px rgba(0,0,0,0.3)'
             }}
-            onClick={() => setShowSmartWizard(true)}
           >
-            🪄 Smart Wizard
+            {/* ...existing code... */}
           </button>
         </div>
-        
+        {/* Load Project Modal */}
+        {showLoadProject && (
+              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                <div className="bg-white p-6 rounded-lg max-w-2xl w-full mx-4 max-h-[80vh] overflow-y-auto">
+                  <div className="flex justify-between items-center mb-4">
+                    <h2 className="text-xl font-bold text-purple-800">Load Project</h2>
+                    <button 
+                      onClick={() => setShowLoadProject(false)}
+                      className="text-gray-500 hover:text-gray-700 text-2xl"
+                    >
+                      ×
+                    </button>
+                  </div>
+                  {projects.length === 0 ? (
+                    <p className="text-gray-600 text-center py-8">No saved projects found.</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {projects.map((project) => (
+                        <div 
+                          key={project.name + project.createdAt}
+                          className="border rounded-lg p-4 hover:bg-purple-50 cursor-pointer transition-colors"
+                          onClick={() => {
+                            applyProject(project);
+                            setShowLoadProject(false);
+                            alert(`Loaded project: ${project.name}`);
+                          }}
+                        >
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <h3 className="font-semibold text-purple-800">{project.name}</h3>
+                              <p className="text-sm text-gray-600">
+                                {new Date(project.createdAt).toLocaleDateString()} at {new Date(project.createdAt).toLocaleTimeString()}
+                              </p>
+                              {project.inputs && (
+                                <p className="text-sm text-gray-500 mt-1">
+                                  {project.inputs.powerMW}MW • {project.inputs.standbyHours}h • {project.inputs.gridMode}
+                                </p>
+                              )}
+                            </div>
+                            <button 
+                              className="px-3 py-1 bg-purple-100 hover:bg-purple-200 text-purple-800 rounded text-sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                applyProject(project);
+                                setShowLoadProject(false);
+                                alert(`Loaded project: ${project.name}`);
+                              }}
+                            >
+                              Load
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  <div className="mt-6 flex justify-end">
+                    <button 
+                      onClick={() => setShowLoadProject(false)}
+                      className="px-4 py-2 border rounded hover:bg-gray-50"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
         <div className="flex items-center space-x-2">
           <span className="text-sm text-gray-600">Current kWh Price:</span>
           <a 
@@ -1097,46 +1064,6 @@ export default function BessQuoteBuilder() {
           </a>
         </div>
       </div>
-
-      {/* Header */}
-      <header className="flex flex-col items-center mb-4 bg-gradient-to-r from-blue-100 to-white rounded-2xl p-4 shadow-md">
-        <img src={newMerlin} alt="Merlin" className="w-28 h-auto drop-shadow-lg mb-3" />
-        <h1 className="text-3xl font-extrabold text-blue-700 tracking-wide text-center">Merlin BESS Quote Builder</h1>
-        <p className="text-sm text-gray-600 italic">“Magic meets energy.”</p>
-
-        {/* Project bar */}
-        <div className="mt-3 flex flex-wrap items-center gap-2">
-          <input
-            className="border p-2 rounded"
-            placeholder="Project name"
-            value={projectName}
-            onChange={e => setProjectName(e.target.value)}
-          />
-          <button className="bg-blue-100 border border-blue-300 rounded px-3 py-2 shadow-sm hover:bg-blue-200 transition-colors font-semibold text-blue-800" onClick={handleSaveProject}>
-            💾 Save Project
-          </button>
-          <button 
-            className="border rounded px-3 py-2 bg-purple-100 hover:bg-purple-200 text-purple-800"
-            onClick={() => setShowLoadProject(true)}
-          >
-            Load Project
-          </button>
-          <button 
-            className="bg-purple-600 border border-purple-700 rounded px-3 py-2 shadow-sm hover:bg-purple-700 transition-colors font-bold text-yellow-400"
-            onClick={() => {
-              const token = localStorage.getItem('auth_token');
-              if (!token) {
-                alert('Please sign in to access your portfolio');
-                setShowUserProfile(true);
-                return;
-              }
-              setShowPortfolio(true);
-            }}
-          >
-            📁 Portfolio
-          </button>
-        </div>
-      </header>
 
       {/* Inputs Panel */}
       <div className="grid grid-cols-2 gap-4">
@@ -1256,23 +1183,11 @@ export default function BessQuoteBuilder() {
 
       {/* Scroll Indicator */}
       <div className="flex flex-col items-center py-4 animate-bounce">
-        <div className="text-center mb-2">
-          <p className="text-sm text-gray-600 font-semibold">👇 Scroll down to complete your quote</p>
-          <p className="text-xs text-gray-500">Review assumptions and see your results below</p>
+        <div className="flex flex-col items-center mb-2">
+          <svg className="w-10 h-10 text-blue-300 drop-shadow-lg" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m0 0l-6-6m6 6l6-6" />
+          </svg>
         </div>
-        <svg 
-          className="w-6 h-6 text-blue-500" 
-          fill="none" 
-          stroke="currentColor" 
-          viewBox="0 0 24 24"
-        >
-          <path 
-            strokeLinecap="round" 
-            strokeLinejoin="round" 
-            strokeWidth={2} 
-            d="M19 14l-7 7m0 0l-7-7m7 7V3"
-          />
-        </svg>
       </div>
 
       {/* Assumptions Panel */}
@@ -1296,7 +1211,7 @@ export default function BessQuoteBuilder() {
           </div>
         )}
 
-        <>
+  {/* Assumptions Panel Content Start */}
           <div className="grid grid-cols-2 gap-3 text-sm">
             <AssumptionNumber label="Battery $/kWh" value={assm.batteryCostPerKWh} onChange={v => updateAssumption('batteryCostPerKWh', v)} />
             <AssumptionNumber label="PCS $/kW" value={assm.pcsCostPerKW} onChange={v => updateAssumption('pcsCostPerKW', v)} />
@@ -1305,7 +1220,7 @@ export default function BessQuoteBuilder() {
             <AssumptionNumber label="Off-grid PCS factor" value={assm.offgridFactor} step={0.01} onChange={v => updateAssumption('offgridFactor', v)} />
             <AssumptionNumber label="On-grid PCS factor" value={assm.ongridFactor} step={0.01} onChange={v => updateAssumption('ongridFactor', v)} />
             <AssumptionNumber label="Gen $/kW" value={assm.genCostPerKW} onChange={v => updateAssumption('genCostPerKW', v)} />
-            <AssumptionNumber label="Solar $/kWp" value={assm.solarCostPerKWp} onChange={v => updateAssumption('solarCostPerKWp', v)} />
+            <AssumptionNumber label="Solar $/KWp" value={assm.solarCostPerKWp} onChange={v => updateAssumption('solarCostPerKWp', v)} />
             <AssumptionNumber label="Wind $/kW" value={assm.windCostPerKW} onChange={v => updateAssumption('windCostPerKW', v)} />
             
             {/* Country Selector for Tariff Lookup */}
@@ -1356,7 +1271,7 @@ export default function BessQuoteBuilder() {
               Reset to Defaults
             </button>
           </div>
-        </>
+  {/* Assumptions Panel Content End */}
       </div>
 
       {/* BESS Quote Draft */}
@@ -1370,7 +1285,9 @@ export default function BessQuoteBuilder() {
           </div>
           <div>
             <h3 className="font-bold text-lg text-gray-800">BESS QUOTE DRAFT</h3>
-            <p className="text-xs text-gray-600">Project Cost Breakdown & Analysis</p>
+            <p className="text-xs text-gray-600">
+              Project Cost Breakdown & Analysis
+            </p>
           </div>
         </div>
         
@@ -1405,7 +1322,7 @@ export default function BessQuoteBuilder() {
       </div>
 
       {/* Export */}
-      <div className="flex gap-3 items-center">
+  <div className="flex gap-3 items-center">
         {/* Export buttons - moved to the left and made prominent */}
         <div className="flex gap-3 mr-6">
           <button 
@@ -1413,77 +1330,11 @@ export default function BessQuoteBuilder() {
             disabled={busy==='word'} 
             onClick={exportToWord}
           >
-            {busy==='word' ? '🪄 Exporting…' : '📄 Export Word'}
+            Export to Word
           </button>
-          <button 
-            className="px-6 py-3 rounded-lg border-2 border-blue-400 bg-blue-50 text-blue-800 font-bold hover:bg-blue-100 hover:border-blue-500 transition-all shadow-md disabled:opacity-60 disabled:cursor-not-allowed" 
-            disabled={busy==='excel'} 
-            onClick={exportToExcel}
-          >
-            {busy==='excel' ? '🪄 Exporting…' : '📊 Export Excel'}
-          </button>
-        </div>
-        
-        {/* Other buttons */}
-        <button 
-          className="px-4 py-2 rounded border bg-green-600 text-white hover:bg-green-700"
-          onClick={() => setShowVendorManager(true)}
-        >
-          Vendor Manager
-        </button>
-        <button 
-          className="px-4 py-2 rounded border bg-purple-600 text-white hover:bg-purple-700"
-          onClick={() => setShowDatabaseTest(true)}
-        >
-          Database Test
-        </button>
-        <button 
-          className="px-4 py-2 rounded border bg-green-600 text-white hover:bg-green-700"
-          onClick={async () => {
-            try {
-              const apiBase = window.location.hostname === 'localhost' ? 'http://localhost:5001' : '';
-              console.log('Testing connectivity to:', `${apiBase}/api/test`);
-              const response = await fetch(`${apiBase}/api/test`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ test: 'connectivity check', timestamp: new Date().toISOString() })
-              });
-              const result = await response.json();
-              console.log('Test result:', result);
-              alert(`✅ Backend connection successful!\n${result.message}`);
-            } catch (error) {
-              console.error('Connectivity test failed:', error);
-              const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-              alert(`❌ Backend connection failed: ${errorMessage}`);
-            }
-          }}
-        >
-          🔗 Test Backend
-        </button>
-      </div>
 
-      {/* Magical Export Notification */}
-      {magicalExport && (
-        <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-purple-600 text-white px-8 py-4 rounded-lg shadow-lg z-50 animate-pulse">
-          <div className="text-center">
-            <div className="text-4xl mb-2">✨🪄✨</div>
-            <div className="text-lg font-bold">Magic Export Complete!</div>
-            <div className="text-sm">Your quote has been enchanted and exported</div>
-          </div>
-        </div>
-      )}
-
-      <p className="text-xs text-neutral-500">
-        Import vendor quotes as JSON or CSV to override assumptions. Values persist in your browser.
-      </p>
-
-      {/* Vendor Manager Modal */}
-      <VendorManager 
-        isOpen={showVendorManager}
-        onClose={() => setShowVendorManager(false)}
-      />
-
-      {/* Database Test Modal */}
+  {/* Database Test Modal */}
+  </div>
       <DatabaseTest 
         isOpen={showDatabaseTest}
         onClose={() => setShowDatabaseTest(false)}
@@ -1509,6 +1360,7 @@ export default function BessQuoteBuilder() {
           savePendingQuoteAfterLogin();
         }}
       />
+    </div>
 
       {/* Portfolio Modal */}
       {showPortfolio && (
@@ -1623,12 +1475,11 @@ export default function BessQuoteBuilder() {
                 </div>
                 <h2 className="text-2xl font-bold text-gray-800 mb-2">
                   Session Expired
-               
                 </h2>
                 <p className="text-gray-600">
                   Your session has expired and needs to be renewed
                 </p>
-              </div }
+              </div>
             </div>
 
             {/* Content */}
@@ -1682,7 +1533,7 @@ export default function BessQuoteBuilder() {
           <div className="bg-white rounded-xl shadow-2xl max-w-md w-full border border-green-100">
             {/* Header */}
             <div className="bg-gradient-to-r from-green-50 to-emerald-50 p-6 rounded-t-xl border-b border-green-100">
-              <div className="text-center">
+                           <div className="text-center">
                 <div className="w-16 h-16 mx-auto mb-4 bg-green-100 rounded-full flex items-center justify-center">
                   <span className="text-3xl">{pendingSave ? '🎉' : '✅'}</span>
                 </div>
@@ -1695,7 +1546,7 @@ export default function BessQuoteBuilder() {
                     : 'Your quote has been saved successfully'
                   }
                 </p>
-              </div }
+              </div>
             </div>
 
             {/* Content */}
@@ -1959,7 +1810,7 @@ export default function BessQuoteBuilder() {
                         { key: 'bess', label: 'BESS (Battery Energy Storage)', icon: '🔋', desc: 'Core battery system' },
                         { key: 'powerGeneration', label: 'Power Generation', icon: '⚡', desc: 'Diesel/gas generators' },
                         { key: 'solar', label: 'Solar Panels', icon: '☀️', desc: 'Photovoltaic systems' },
-                        { key: 'wind', label: 'Wind Turbines', icon: '�', desc: 'Wind power generation' },
+                        { key: 'wind', label: 'Wind Turbines', icon: '💨', desc: 'Wind power generation' },
                         { key: 'hybrid', label: 'Hybrid System', icon: '🔄', desc: 'Combined generation + storage' },
                         { key: 'grid', label: 'Grid Connection', icon: '🔌', desc: 'Utility grid integration' }
                       ].map((equipment) => (
@@ -1991,7 +1842,7 @@ export default function BessQuoteBuilder() {
                             {/* Checkbox indicator */}
                             <div className="absolute -top-1 -left-1 w-6 h-6 border-2 border-gray-400 bg-white rounded flex items-center justify-center shadow-lg z-10">
                               {wizardData.equipmentNeeded[equipment.key as keyof typeof wizardData.equipmentNeeded] ? (
-                                <span className="text-green-600 text-lg font-bold">✓</span>
+                                <span className="text-green-600 text-lg font-bold"> </span>
                               ) : (
                                 <span className="text-gray-300"></span>
                               )}
@@ -2001,12 +1852,12 @@ export default function BessQuoteBuilder() {
                               <span className="text-xl">{equipment.icon}</span>
                               <div className="flex-1">
                                 <div className="font-medium text-sm">{equipment.label}</div>
-                                <div className="text-xs text-gray-600">{equipment.desc}</div>
-                                <div className="text-xs text-blue-600">
-                                  Status: {wizardData.equipmentNeeded[equipment.key as keyof typeof wizardData.equipmentNeeded] ? 'SELECTED' : 'NOT SELECTED'}
-                                </div>
                               </div>
                             </div>
+                          </div>
+                          <div className="text-xs text-gray-600">{equipment.desc}</div>
+                          <div className="text-xs text-blue-600">
+                            Status: {wizardData.equipmentNeeded[equipment.key as keyof typeof wizardData.equipmentNeeded] ? 'SELECTED' : 'NOT SELECTED'}
                           </div>
                         </button>
                       ))}
@@ -2165,6 +2016,7 @@ export default function BessQuoteBuilder() {
                                 </div>
                               </div>
                             </div>
+                          </div>
                         </button>
                       ))}
                     </div>
@@ -2695,24 +2547,6 @@ export default function BessQuoteBuilder() {
           </div>
         </div>
       )}
-      </div>
-    </>
-  )
-}
-
-function AssumptionNumber({
-  label, value, onChange, step = 1,
-}: { label: string; value: number; onChange: (v: number) => void; step?: number }) {
-  return (
-    <label className="flex items-center justify-between gap-2">
-      <span className="text-sm">{label}</span>
-      <input
-        className="border p-2 rounded w-40 text-right"
-        type="number"
-        step={step}
-        value={value}
-        onChange={e => onChange(Number(e.target.value))}
-      />
-    </label>
-  )
+  </>
+  );
 }

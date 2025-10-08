@@ -20,7 +20,7 @@ COPY . .
 RUN ls -la server/templates/ || echo "Templates directory not found"
 
 # Build the React application
-RUN NODE_ENV=development npm run build
+RUN npm run build
 
 # Remove dev dependencies to reduce image size
 RUN npm prune --production
