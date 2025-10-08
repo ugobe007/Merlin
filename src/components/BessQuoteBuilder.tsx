@@ -1,3 +1,49 @@
+      {/* Advanced Input Modal */}
+      {showAdvancedInputs && (
+        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-2xl max-w-lg w-full p-8 border border-blue-200 relative">
+            <button
+              className="absolute top-4 right-4 text-gray-500 hover:text-gray-700 text-2xl font-bold"
+              onClick={() => setShowAdvancedInputs(false)}
+              aria-label="Close Advanced Inputs"
+            >
+              ×
+            </button>
+            <h2 className="text-2xl font-bold text-blue-700 mb-4">Advanced Quote Options</h2>
+            <div className="space-y-4">
+              <label className="flex flex-col text-sm font-semibold">Project Reference
+                <input className="border p-2 rounded font-normal mt-1" type="text" value={projectName} onChange={e => setProjectName(e.target.value)} placeholder="e.g. Customer PO, Site Name" />
+              </label>
+              <label className="flex flex-col text-sm font-semibold">Voltage
+                <select className="border p-2 rounded font-normal mt-1" value={inputs.voltage} onChange={e => updateInputs('voltage', e.target.value)}>
+                  <option value="800V">800V</option>
+                  <option value="400V">400V</option>
+                  <option value="200V">200V</option>
+                </select>
+              </label>
+              <label className="flex flex-col text-sm font-semibold">Grid Mode
+                <select className="border p-2 rounded font-normal mt-1" value={inputs.gridMode} onChange={e => updateInputs('gridMode', e.target.value)}>
+                  <option value="on-grid">On-grid</option>
+                  <option value="off-grid">Off-grid</option>
+                  <option value="hybrid">Hybrid</option>
+                </select>
+              </label>
+              <label className="flex flex-col text-sm font-semibold">Country
+                <input className="border p-2 rounded font-normal mt-1" type="text" value={inputs.country} onChange={e => updateInputs('country', e.target.value)} placeholder="e.g. USA, Canada" />
+              </label>
+              {/* Add more advanced fields as needed */}
+            </div>
+            <div className="flex justify-end mt-6">
+              <button
+                className="bg-gradient-to-r from-blue-500 to-purple-600 text-white px-6 py-2 rounded-lg shadow hover:scale-105 transition-transform font-semibold"
+                onClick={() => setShowAdvancedInputs(false)}
+              >
+                Done
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 // ...existing imports...
 
 import { useEffect, useRef, useState } from 'react'
@@ -22,7 +68,13 @@ export function AssumptionNumber({ label, value, onChange, step = 1 }: { label: 
         onChange={e => onChange(Number(e.target.value))}
       />
     </label>
-      {/* Smart Wizard Modal and all wizardData/setWizardData logic commented out for clean compile */}
+  );
+}
+
+// ...existing code...
+
+// Advanced Input Modal/Panel State
+const [showAdvancedInputs, setShowAdvancedInputs] = useState(false);
 // Helper function to get tariff percentage by country name
 function getTariffByCountry(countryName: string): number {
   return COUNTRY_TARIFF_LOOKUP[countryName] || COUNTRY_TARIFF_LOOKUP['Other']
@@ -513,9 +565,9 @@ function getTariffByCountry(countryName: string): number {
         </div>
       </div>
 
-      {/* Scroll Indicator */}
+      {/* Scroll Indicator - static light blue text */}
       <div className="flex flex-col items-center py-4">
-        <span className="text-lg font-semibold" style={{ color: '#60a5fa' }}>scroll down</span>
+        <span className="text-lg font-semibold text-blue-400">scroll down</span>
       </div>
 
       {/* Assumptions Panel */}
