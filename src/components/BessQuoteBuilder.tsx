@@ -349,41 +349,69 @@ export default function BessQuoteBuilder() {
         ? i.budgetAmount - grandCapex
         : undefined
 
-    return {
-      totalMWh, pcsKW, batterySubtotal, pcsSubtotal, bos, epc, bessCapex,
-      genSubtotal, solarSubtotal, windSubtotal, tariffs,
-      grandCapexBeforeWarranty, grandCapex, annualSavings, roiYears, budgetDelta
-    }
+    return (
+      <div className="p-8 max-w-5xl mx-auto space-y-6">
+        {/* Advanced Inputs Modal */}
+        {showAdvancedInputs && (
+          <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+            <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-2xl w-full relative">
+              <button
+                className="absolute top-4 right-4 text-gray-500 hover:text-gray-700 text-2xl font-bold"
+                onClick={() => setShowAdvancedInputs(false)}
+              >
+                &times;
+              </button>
+              <h2 className="text-xl font-bold mb-4 text-purple-700">Advanced Project Inputs</h2>
+              <div className="space-y-4">
+                <label className="block font-semibold">Upload Documentation (energy bills, meter data, etc.)
+                  <input type="file" multiple className="mt-2 block" />
+                </label>
+                <label className="block font-semibold">Average Daily Load (kWh)
+                  <input type="number" className="mt-2 border p-2 rounded w-full" />
+                </label>
+                <label className="block font-semibold">Peak Load (kW)
+                  <input type="number" className="mt-2 border p-2 rounded w-full" />
+                </label>
+                <label className="block font-semibold">Commercial Operating Hours
+                  <select className="mt-2 border p-2 rounded w-full">
+                    <option>24 / 7</option>
+                    <option>Daytime Only (8 am - 5pm)</option>
+                    <option>Other</option>
+                  </select>
+                </label>
+                {/* Add more advanced fields as needed */}
+              </div>
+            </div>
+          </div>
+        )}
+
+  function updateInputs(key, value) {
+  function updateInputs(key, value) {
+    const nextInputs = { ...inputs, [key]: value };
+    setInputs(nextInputs);
+    setOut(calc(nextInputs, assm));
   }
 
-  function updateInputs<K extends keyof Inputs>(key: K, value: Inputs[K]) {
-    const nextInputs = { ...inputs, [key]: value }
-    setInputs(nextInputs)
-    setOut(calc(nextInputs, assm))
-  }
-
-  function updateAssumption<K extends keyof Assumptions>(key: K, value: Assumptions[K]) {
-    const nextAssm = { ...assm, [key]: value }
-    setAssm(nextAssm)
-    persistAssumptions(nextAssm)
-    setOut(calc(inputs, nextAssm))
+  function updateAssumption(key, value) {
+  function updateAssumption(key, value) {
+    const nextAssm = { ...assm, [key]: value };
+    setAssm(nextAssm);
+    persistAssumptions(nextAssm);
+    setOut(calc(inputs, nextAssm));
   }
 
   // Smart Wizard Logic
   function generateSmartConfiguration() {
     debugLog('🪄 generateSmartConfiguration called', wizardData);
-    
-    const { applications, budgetRange, powerMW, equipmentNeeded, gridConnection, worldRegion } = wizardData
-    
+    const { applications, budgetRange, powerMW, equipmentNeeded, gridConnection, worldRegion } = wizardData;
     // Initialize configuration based on application type and user inputs
-    let config: Partial<Inputs> = {
+    let config = {
       locationRegion: worldRegion, // Use tariff region instead of project location
       gridMode: gridConnection === 'behind' ? 'on-grid' : 'off-grid',
       powerMW: powerMW // Use the exact power specified by user
-    }
-
+    };
     // Determine specific settings based on primary application
-    const primaryApplication = applications.length > 0 ? applications[0] : 'Custom Application'
+    const primaryApplication = applications.length > 0 ? applications[0] : 'Custom Application';
     switch (primaryApplication) {
       case 'EV Charging':
         config = {
@@ -392,9 +420,8 @@ export default function BessQuoteBuilder() {
           useCase: 'EV Charging Stations',
           utilization: 0.6,
           valuePerKWh: 0.35
-        }
-        break
-      
+        };
+        break;
       case 'Industrial Backup':
         config = {
           ...config,
@@ -402,9 +429,8 @@ export default function BessQuoteBuilder() {
           useCase: 'Industrial Backup',
           utilization: 0.1,
           valuePerKWh: 0.5
-        }
-        break
-
+        };
+        break;
       case 'Grid Stabilization':
         config = {
           ...config,
@@ -412,9 +438,8 @@ export default function BessQuoteBuilder() {
           useCase: 'Grid Stabilization',
           utilization: 0.3,
           valuePerKWh: 0.25
-        }
-        break
-
+        };
+        break;
       case 'Renewable Integration':
         config = {
           ...config,
@@ -422,9 +447,8 @@ export default function BessQuoteBuilder() {
           useCase: 'Renewable Integration',
           utilization: 0.4,
           valuePerKWh: 0.2
-        }
-        break
-
+        };
+        break;
       case 'Peak Shaving':
         config = {
           ...config,
@@ -432,9 +456,8 @@ export default function BessQuoteBuilder() {
           useCase: 'Peak Shaving',
           utilization: 0.5,
           valuePerKWh: 0.4
-        }
-        break
-
+        };
+        break;
       default:
         config = {
           ...config,
@@ -442,90 +465,78 @@ export default function BessQuoteBuilder() {
           useCase: 'General Purpose',
           utilization: 0.3,
           valuePerKWh: 0.25
-        }
+        };
     }
-
     // Configure additional equipment based on selections
     if (equipmentNeeded.solar) {
-      config.solarMWp = powerMW * 1.5 // Oversized solar for battery charging
+      config.solarMWp = powerMW * 1.5; // Oversized solar for battery charging
     }
-    
     if (equipmentNeeded.wind) {
-      config.windMW = powerMW * 1.2
+      config.windMW = powerMW * 1.2;
     }
-    
     if (equipmentNeeded.powerGeneration) {
-      config.generatorMW = powerMW * 0.8 // Backup generator
+      config.generatorMW = powerMW * 0.8; // Backup generator
     }
-
     // Configure hybrid system
     if (equipmentNeeded.hybrid) {
-      const { generationMW, storageMWh, generationType } = wizardData.hybridConfig
-      
+      const { generationMW, storageMWh, generationType } = wizardData.hybridConfig;
       // Set battery capacity based on storage requirement
       if (storageMWh > 0) {
-        config.standbyHours = storageMWh / powerMW // Calculate hours from storage capacity
+        config.standbyHours = storageMWh / powerMW; // Calculate hours from storage capacity
       }
-      
       // Configure generation based on type
       switch (generationType) {
         case 'solar':
-          config.solarMWp = generationMW
-          break
+          config.solarMWp = generationMW;
+          break;
         case 'wind':
-          config.windMW = generationMW
-          break
+          config.windMW = generationMW;
+          break;
         case 'generator':
-          config.generatorMW = generationMW
-          break
+          config.generatorMW = generationMW;
+          break;
         case 'mixed':
           // Split generation between sources
-          config.solarMWp = generationMW * 0.6
-          config.windMW = generationMW * 0.4
-          break
+          config.solarMWp = generationMW * 0.6;
+          config.windMW = generationMW * 0.4;
+          break;
       }
-      
       // Update use case for hybrid systems
-      config.useCase = `Hybrid ${generationType.charAt(0).toUpperCase() + generationType.slice(1)} + Storage`
+      config.useCase = `Hybrid ${generationType.charAt(0).toUpperCase() + generationType.slice(1)} + Storage`;
     }
-
     // Adjust grid mode if grid equipment not selected
     if (!equipmentNeeded.grid) {
-      config.gridMode = 'off-grid'
+      config.gridMode = 'off-grid';
     }
-
     // Set budget if specified
     if (budgetRange !== 'flexible') {
-      config.budgetKnown = true
+      config.budgetKnown = true;
       switch (budgetRange) {
         case 'under500k':
-          config.budgetAmount = 400000
-          break
+          config.budgetAmount = 400000;
+          break;
         case '500k-2m':
-          config.budgetAmount = 1500000
-          break
+          config.budgetAmount = 1500000;
+          break;
         case '2m-10m':
-          config.budgetAmount = 6000000
-          break
+          config.budgetAmount = 6000000;
+          break;
         case '10m+':
-          config.budgetAmount = 15000000
-          break
+          config.budgetAmount = 15000000;
+          break;
       }
     }
-
     // Apply configuration
-    const nextInputs = { ...inputs, ...config }
+    const nextInputs = { ...inputs, ...config };
     debugLog('Configuration applied', {
       oldInputs: inputs,
       config: config,
       newInputs: nextInputs
     });
-    setInputs(nextInputs)
-    setOut(calc(nextInputs, assm))
-    
+    setInputs(nextInputs);
+    setOut(calc(nextInputs, assm));
     // Set project name based on configuration
-    setProjectName(`${primaryApplication} - ${config.powerMW}MW System`)
-    
+    setProjectName(`${primaryApplication} - ${config.powerMW}MW System`);
     // Close wizard immediately - no need to wait
     debugLog('Closing wizard and starting export');
     setShowSmartWizard(false)
@@ -643,7 +654,7 @@ export default function BessQuoteBuilder() {
     // Check if user is logged in
     const token = localStorage.getItem('auth_token');
     if (!token) {
-      // Not logged in: show modal to log in or sign up
+      // Not logged in: always show modal to log in or sign up
       setPendingSave(snap);
       setSavePromptData({ projectName: snap.name });
       setShowSavePrompt(true);
@@ -1016,7 +1027,42 @@ export default function BessQuoteBuilder() {
   }
 
   return (
-    <div className="p-8 max-w-5xl mx-auto space-y-6">
+    <>
+      {/* Advanced Inputs Modal */}
+      {showAdvancedInputs && (
+        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-2xl w-full relative">
+            <button
+              className="absolute top-4 right-4 text-gray-500 hover:text-gray-700 text-2xl font-bold"
+              onClick={() => setShowAdvancedInputs(false)}
+            >
+              &times;
+            </button>
+            <h2 className="text-xl font-bold mb-4 text-purple-700">Advanced Project Inputs</h2>
+            <div className="space-y-4">
+              <label className="block font-semibold">Upload Documentation (energy bills, meter data, etc.)
+                <input type="file" multiple className="mt-2 block" />
+              </label>
+              <label className="block font-semibold">Average Daily Load (kWh)
+                <input type="number" className="mt-2 border p-2 rounded w-full" />
+              </label>
+              <label className="block font-semibold">Peak Load (kW)
+                <input type="number" className="mt-2 border p-2 rounded w-full" />
+              </label>
+              <label className="block font-semibold">Commercial Operating Hours
+                <select className="mt-2 border p-2 rounded w-full">
+                  <option>24 / 7</option>
+                  <option>Daytime Only (8 am - 5pm)</option>
+                  <option>Other</option>
+                </select>
+              </label>
+              {/* Add more advanced fields as needed */}
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="p-8 max-w-5xl mx-auto space-y-6">
       {/* Top Bar with User Profile and Price */}
       <div className="flex justify-between items-center mb-4">
         <div className="flex items-center space-x-4">
@@ -1102,23 +1148,39 @@ export default function BessQuoteBuilder() {
           <input className="border p-2 rounded font-normal" type="number" step="0.5" value={inputs.standbyHours}
             onChange={e => updateInputs('standbyHours', Number(e.target.value))} />
         </label>
-
+        {/* Advanced Input Button */}
+        <div className="col-span-2 flex justify-end mt-2">
+          <button
+            className="bg-gradient-to-r from-blue-400 to-purple-500 text-white px-4 py-2 rounded-lg shadow hover:scale-105 transition-transform font-semibold"
+            onClick={() => setShowAdvancedInputs(true)}
+          >
+            Advanced Input Options
+          </button>
+        </div>
+        <label className="flex flex-col text-sm font-bold">Voltage
+          <select className="border p-2 rounded font-normal" value={inputs.voltage}
+            onChange={e => updateInputs('voltage', e.target.value)}>
+            <option value="800V">800V</option>
+            <option value="400V">400V</option>
+            <option value="200V">200V</option>
+          </select>
+        </label>
         <label className="flex flex-col text-sm font-bold">Grid Mode
           <select className="border p-2 rounded font-normal" value={inputs.gridMode}
-            onChange={e => updateInputs('gridMode', e.target.value as any)}>
+            onChange={e => updateInputs('gridMode', e.target.value)}>
             <option value="on-grid">On-grid</option>
             <option value="off-grid">Off-grid</option>
           </select>
         </label>
-
         <label className="flex flex-col text-sm font-bold">Use Case
           <select className="border p-2 rounded font-normal" value={inputs.useCase}
             onChange={e => updateInputs('useCase', e.target.value)}>
+            <option value="">Select use case...</option>
             {[
               'EV Charging Stations', 'Car Washes', 'Hotels', 'Data Centers', 'Airports',
               'Solar Farms', 'Processing Plants', 'Indoor Farms', 'Casinos',
               'Colleges & Universities', 'Manufacturing', 'Logistic Hubs', 'Mining'
-            ].map(u => <option key={u}>{u}</option>)}
+            ].map(u => (<option key={u} value={u}>{u}</option>))}
           </select>
         </label>
 
@@ -1561,11 +1623,12 @@ export default function BessQuoteBuilder() {
                 </div>
                 <h2 className="text-2xl font-bold text-gray-800 mb-2">
                   Session Expired
+               
                 </h2>
                 <p className="text-gray-600">
                   Your session has expired and needs to be renewed
                 </p>
-              </div>
+              </div }
             </div>
 
             {/* Content */}
@@ -1575,7 +1638,7 @@ export default function BessQuoteBuilder() {
                   <p className="text-gray-700 mb-2">
                     <strong>📋 "{savePromptData.projectName}"</strong>
                   </p>
-                  <p className="text-sm text-gray-600">
+                  <p className="text-sm text-gray-600 mb-6">
                     Please log in or sign up to save your quote.
                   </p>
                 </div>
@@ -1632,7 +1695,7 @@ export default function BessQuoteBuilder() {
                     : 'Your quote has been saved successfully'
                   }
                 </p>
-              </div>
+              </div }
             </div>
 
             {/* Content */}
@@ -2102,7 +2165,6 @@ export default function BessQuoteBuilder() {
                                 </div>
                               </div>
                             </div>
-                          </div>
                         </button>
                       ))}
                     </div>
@@ -2633,7 +2695,8 @@ export default function BessQuoteBuilder() {
           </div>
         </div>
       )}
-    </div>
+      </div>
+    </>
   )
 }
 
