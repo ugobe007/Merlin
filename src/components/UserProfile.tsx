@@ -65,7 +65,7 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, onLoadQuote,
   const [forgotEmail, setForgotEmail] = useState('');
 
   // EMERGENCY FIX: Force cache bust and absolute URLs
-  const API_BASE = '';
+  const API_BASE = 'https://merlin.fly.dev';
   const PROFILE_URL = 'https://merlin.fly.dev/api/auth/profile';
   
   // Force debugging output to appear with timestamp
@@ -103,7 +103,15 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, onLoadQuote,
         throw new Error('No authentication token found. Please log in again.');
       }
       
-      const response = await fetch('https://merlin.fly.dev/api/auth/profile', {
+      // Debug log before fetch
+      console.log('About to fetch profile:', PROFILE_URL, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      const response = await fetch(PROFILE_URL, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -149,7 +157,7 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, onLoadQuote,
 
   const fetchQuotes = async () => {
     try {
-      const response = await fetch(`${API_BASE}/api/auth/quotes`, {
+  const response = await fetch(`${API_BASE}/api/auth/quotes`, {
         headers: {
           'Content-Type': 'application/json',
           ...getAuthHeaders()
@@ -883,5 +891,4 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, onLoadQuote,
     </div>
   );
 };
-
 export default UserProfile;
