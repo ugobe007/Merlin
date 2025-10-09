@@ -1,9 +1,14 @@
 import React, { useState } from 'react';
+import { apiUrl } from '../utils/api';
 
 export default function BessQuoteBuilder() {
   // Advanced Input Modal/Panel State
   const [showAdvancedInputs, setShowAdvancedInputs] = useState(false);
   const [showSmartWizard, setShowSmartWizard] = useState(false);
+
+  // Save prompt state
+  const [showSavePrompt, setShowSavePrompt] = useState(false);
+
   const [wizardData, setWizardData] = useState({
     primaryApplication: '',
     budgetRange: '',
@@ -14,6 +19,7 @@ export default function BessQuoteBuilder() {
     country: '',
     projectReference: '',
   });
+
   const [quoteInputs, setQuoteInputs] = useState({
     primaryApplication: '',
     budgetRange: '',
@@ -24,11 +30,13 @@ export default function BessQuoteBuilder() {
     country: '',
     projectReference: '',
   });
+
   function generateSmartConfiguration() {
     setQuoteInputs({ ...wizardData });
     alert('Smart configuration applied to quote!');
     setShowSmartWizard(false);
   }
+
   function calculateQuote(inputs: {
     primaryApplication: string;
     budgetRange: string;
@@ -44,17 +52,45 @@ export default function BessQuoteBuilder() {
       totalCost: inputs.powerMW ? Number(inputs.powerMW) * 1000000 : 0,
     };
   }
+
   const [quoteOutputs, setQuoteOutputs] = useState(calculateQuote(quoteInputs));
+
   React.useEffect(() => {
     setQuoteOutputs(calculateQuote(quoteInputs));
   }, [quoteInputs]);
+
+  // Local save (so users don't lose work before auth)
+  function saveQuoteLocally() {
+    try {
+      const existing = JSON.parse(localStorage.getItem('merlin_local_quotes') || '[]');
+      const snapshot = {
+        id: Date.now(),
+        createdAt: new Date().toISOString(),
+        inputs: quoteInputs,
+        outputs: quoteOutputs,
+      };
+      const next = [snapshot, ...existing].slice(0, 50);
+      localStorage.setItem('merlin_local_quotes', JSON.stringify(next));
+      return snapshot;
+    } catch {
+      // no-op if localStorage blocked
+      return null;
+    }
+  }
+
+  function handleSaveProject() {
+    // Save locally, then prompt for auth
+    saveQuoteLocally();
+    setShowSavePrompt(true);
+  }
+
   async function exportToWord() {
     const payload = {
       inputs: quoteInputs,
       outputs: quoteOutputs,
     };
     try {
-      const response = await fetch('/api/export/word', {
+      const response = await fetch(apiUrl('/api/export/word'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -77,6 +113,7 @@ export default function BessQuoteBuilder() {
       alert('Export error: ' + err);
     }
   }
+
   return (
     <>
       <div className="flex gap-4 p-4">
@@ -93,6 +130,15 @@ export default function BessQuoteBuilder() {
           Advanced Quote Options
         </button>
       </div>
+
+      {/* Static guidance message (no animation) */}
+      <div className="px-4">
+        <div className="mt-2 animate-none rounded-lg border border-indigo-200 bg-indigo-50 text-indigo-800 p-3 text-sm">
+          <span className="mr-2">🪄</span>
+          <span>Scroll down to complete your quote. Review assumptions and see your results below.</span>
+        </div>
+      </div>
+
       {/* Show current quote inputs and outputs */}
       <div className="p-4 bg-blue-50 rounded-xl shadow mb-4">
         <h3 className="font-bold text-blue-700 mb-2">Current Quote Inputs</h3>
@@ -106,20 +152,29 @@ export default function BessQuoteBuilder() {
           <div><strong>Grid Mode:</strong> {quoteInputs.gridMode}</div>
           <div><strong>Country:</strong> {quoteInputs.country}</div>
         </div>
+
         <h3 className="font-bold text-purple-700 mt-6 mb-2">Calculated Outputs</h3>
         <div className="grid grid-cols-2 gap-2 text-sm">
           <div><strong>Total Cost:</strong> ${quoteOutputs.totalCost.toLocaleString()}</div>
           {/* Add more outputs as needed */}
         </div>
-        <div className="mt-6 flex justify-end">
+
+        <div className="mt-6 flex justify-end gap-3">
           <button
-            className="bg-gradient-to-r from-blue-500 to-purple-600 text-white px-6 py-2 rounded-lg shadow font-semibold"
-            onClick={exportToWord}
+            className="bg-gradient-to-r from-emerald-600 to-green-600 text-white px-6 py-2 rounded-lg shadow font-semibold hover:from-emerald-700 hover:to-green-700 transition"
+            onClick={handleSaveProject}
           >
-            Export to Word
+            Save Project
           </button>
+            <button
+              className="bg-gradient-to-r from-blue-500 to-purple-600 text-white px-6 py-2 rounded-lg shadow font-semibold"
+              onClick={exportToWord}
+            >
+              Export to Word
+            </button>
         </div>
       </div>
+
       {/* Smart Wizard Modal */}
       {showSmartWizard && (
         <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
@@ -179,6 +234,7 @@ export default function BessQuoteBuilder() {
           </div>
         </div>
       )}
+
       {/* Advanced Input Modal */}
       {showAdvancedInputs && (
         <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
@@ -234,6 +290,71 @@ export default function BessQuoteBuilder() {
               >
                 Done
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Professional Save Prompt */}
+      {showSavePrompt && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Save Your Quote"
+        >
+          <div className="bg-white rounded-xl shadow-2xl max-w-lg w-full border border-gray-100 overflow-hidden">
+            <div className="bg-gradient-to-r from-blue-50 to-purple-50 p-6 border-b border-gray-100">
+              <div className="text-center">
+                <div className="w-16 h-16 mx-auto mb-4 bg-blue-100 rounded-full flex items-center justify-center">
+                  <span className="text-3xl">💾</span>
+                </div>
+                <h2 className="text-2xl font-bold text-gray-800 mb-2">Save Your Quote</h2>
+                <p className="text-gray-600">
+                  Create an account or log in to save this quote to your Portfolio.
+                </p>
+              </div>
+            </div>
+
+            <div className="p-6">
+              <div className="bg-gradient-to-br from-blue-50 to-purple-50 p-5 rounded-xl border border-blue-100 mb-6 text-sm text-gray-700">
+                <ul className="space-y-2">
+                  <li className="flex items-center">
+                    <span className="mr-2">✓</span> Save and manage multiple quotes
+                  </li>
+                  <li className="flex items-center">
+                    <span className="mr-2">✓</span> Access from any device
+                  </li>
+                  <li className="flex items-center">
+                    <span className="mr-2">✓</span> Export and share professionally
+                  </li>
+                </ul>
+              </div>
+
+              <div className="space-y-3">
+                <a
+                  href="/signup"
+                  className="w-full block text-center bg-gradient-to-r from-green-600 to-emerald-600 text-white px-6 py-3 rounded-xl font-semibold hover:from-green-700 hover:to-emerald-700 transition"
+                >
+                  Join Now - Create Free Account
+                </a>
+                <a
+                  href="/login"
+                  className="w-full block text-center bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-6 py-3 rounded-xl font-semibold hover:from-blue-700 hover:to-indigo-700 transition"
+                >
+                  Log In - Existing Account
+                </a>
+                <button
+                  onClick={() => setShowSavePrompt(false)}
+                  className="w-full border-2 border-gray-200 text-gray-600 px-6 py-3 rounded-xl hover:bg-gray-50 hover:border-gray-300 transition font-medium"
+                >
+                  Continue without account
+                </button>
+              </div>
+
+              <p className="text-xs text-gray-500 text-center mt-4">
+                Tip: Your quote has been saved locally on this device.
+              </p>
             </div>
           </div>
         </div>
