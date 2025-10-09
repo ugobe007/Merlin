@@ -73,13 +73,11 @@ export default function BessQuoteBuilder() {
       localStorage.setItem('merlin_local_quotes', JSON.stringify(next));
       return snapshot;
     } catch {
-      // no-op if localStorage blocked
       return null;
     }
   }
 
   function handleSaveProject() {
-    // Save locally, then prompt for auth
     saveQuoteLocally();
     setShowSavePrompt(true);
   }
@@ -132,8 +130,11 @@ export default function BessQuoteBuilder() {
       </div>
 
       {/* Static guidance message (no animation) */}
-      <div className="px-4">
-        <div className="mt-2 animate-none rounded-lg border border-indigo-200 bg-indigo-50 text-indigo-800 p-3 text-sm">
+      <div className="px-4 !animate-none" style={{ animation: 'none' }}>
+        <div
+          className="mt-2 !animate-none rounded-lg border border-indigo-200 bg-indigo-50 text-indigo-800 p-3 text-sm"
+          style={{ animation: 'none', transition: 'none' }}
+        >
           <span className="mr-2">🪄</span>
           <span>Scroll down to complete your quote. Review assumptions and see your results below.</span>
         </div>
@@ -156,7 +157,6 @@ export default function BessQuoteBuilder() {
         <h3 className="font-bold text-purple-700 mt-6 mb-2">Calculated Outputs</h3>
         <div className="grid grid-cols-2 gap-2 text-sm">
           <div><strong>Total Cost:</strong> ${quoteOutputs.totalCost.toLocaleString()}</div>
-          {/* Add more outputs as needed */}
         </div>
 
         <div className="mt-6 flex justify-end gap-3">
@@ -166,12 +166,12 @@ export default function BessQuoteBuilder() {
           >
             Save Project
           </button>
-            <button
-              className="bg-gradient-to-r from-blue-500 to-purple-600 text-white px-6 py-2 rounded-lg shadow font-semibold"
-              onClick={exportToWord}
-            >
-              Export to Word
-            </button>
+          <button
+            className="bg-gradient-to-r from-blue-500 to-purple-600 text-white px-6 py-2 rounded-lg shadow font-semibold"
+            onClick={exportToWord}
+          >
+            Export to Word
+          </button>
         </div>
       </div>
 
@@ -245,7 +245,7 @@ export default function BessQuoteBuilder() {
               aria-label="Close Advanced Inputs"
             >
               ×
-            </button>
+          </button>
             <h2 className="text-2xl font-bold text-blue-700 mb-4">Advanced Quote Options</h2>
             <div className="space-y-4">
               <label className="flex flex-col text-sm font-semibold">Project Reference
