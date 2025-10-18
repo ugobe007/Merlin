@@ -21,7 +21,7 @@
     "checkJs": false,
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
-    "types": ["node", "vite/client", "jest"]
+    "types": ["node", "vite/client", "jest", "react", "react-dom"]
   },
   "include": ["src", "server", "scripts", "types", "**/*.ts", "**/*.tsx", "**/*.js", "**/*.jsx"],
   "exclude": ["vite.config.ts", "vite.config.*", "node_modules", "dist", "src/__tests__"],
