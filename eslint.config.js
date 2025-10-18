@@ -12,12 +12,13 @@ module.exports = defineConfig([
   globalIgnores(['dist']),
   {
     files: ['**/*.{js,jsx,ts,tsx}'],
+    // env must be at the rule level for the flat config
+    env: {
+      browser: true,
+      node: true,
+      es2021: true
+    },
     languageOptions: {
-      env: {
-        browser: true,
-        node: true,
-        es2021: true
-      },
       ecmaVersion: 2020,
       globals: globals.browser,
       parserOptions: {
