@@ -1,0 +1,13 @@
+      {/* Export & Action Buttons */}
+      <div className="flex flex-wrap gap-4 justify-center">
+        <button
+          onClick={() => {
+            const quoteName = prompt('Enter a name for this quote:') || 'BESS_Quote';
+            import('docx').then(({ Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, WidthType, AlignmentType, HeadingLevel }) => {
+          }}
+          className="bg-gradient-to-b from-green-500 to-green-700 text-white px-8 py-3 rounded-2xl font-bold shadow-xl transform hover:scale-105 transition-all border-b-4 border-green-800 hover:border-green-900 flex items-center"
+        >
+          <span className="text-2xl mr-2">📄</span>
+          <span className="text-xl">Export Word</span>
+        </button>
+      </div>

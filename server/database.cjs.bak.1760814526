@@ -3,25 +3,13 @@ const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
 
-// Function to generate UUID v4 using crypto when available (fallbacks included)
+// Function to generate UUID v4 using crypto
 function generateUUID() {
-  if (crypto && typeof crypto.randomUUID === 'function') {
-    return crypto.randomUUID();
-  }
-  try {
-    const bytes = crypto.randomBytes(16);
-    // Per RFC 4122 v4
-    bytes[6] = (bytes[6] & 0x0f) | 0x40;
-    bytes[8] = (bytes[8] & 0x3f) | 0x80;
-    const hex = bytes.toString('hex');
-    return `${hex.substr(0,8)}-${hex.substr(8,4)}-${hex.substr(12,4)}-${hex.substr(16,4)}-${hex.substr(20,12)}`;
-  } catch (e) {
-    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-      const r = Math.random() * 16 | 0;
-      const v = c === 'x' ? r : (r & 0x3 | 0x8);
-      return v.toString(16);
-    });
-  }
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    const r = Math.random() * 16 | 0;
+    const v = c === 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
 }
 
 class QuoteDatabase {
@@ -33,15 +21,6 @@ class QuoteDatabase {
     }
     
     this.db = new Database(path.join(dbDir, 'merlin_quotes.db'));
-
-    // Ensure foreign keys enforcement and a sensible journal mode
-    try {
-      this.db.pragma('foreign_keys = ON');
-      this.db.pragma('journal_mode = WAL');
-    } catch (e) {
-      console.warn('[database] Could not set pragmas (non-fatal):', e.message);
-    }
-
     this.initializeTables();
     console.log('[database] Quote database initialized');
   }
@@ -628,20 +607,14 @@ class QuoteDatabase {
     const user = stmt.get(id);
     console.log('[getUserById] Query result:', user ? 'User found' : 'User not found');
     if (user) {
+      console.log('[getUserById] User data:', JSON.stringify(user, null, 2));
       delete user.password_hash; // Never return password hash
     }
     return user;
   }
 
-  // Public safe fetch (no password_hash) for non-auth usage
   getUserByEmail(email) {
-    const stmt = this.db.prepare('SELECT id, email, first_name, last_name, company, phone, title, linkedin, role, is_active, created_at, updated_at FROM users WHERE email = ? AND is_active = 1');
-    return stmt.get(email);
-  }
-
-  // Internal auth fetch: only for credential checks
-  getUserAuthByEmail(email) {
-    const stmt = this.db.prepare('SELECT id, email, password_hash FROM users WHERE email = ? AND is_active = 1');
+    const stmt = this.db.prepare('SELECT * FROM users WHERE email = ? AND is_active = 1');
     return stmt.get(email);
   }
 
