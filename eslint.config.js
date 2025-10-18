@@ -5,6 +5,8 @@ const reactHooks = require('eslint-plugin-react-hooks');
 const reactRefresh = require('eslint-plugin-react-refresh');
 const { defineConfig, globalIgnores } = require('eslint/config');
 
+const tsPlugin = require('@typescript-eslint/eslint-plugin');
+
 module.exports = defineConfig([
   globalIgnores(['dist']),
   {
@@ -20,16 +22,17 @@ module.exports = defineConfig([
         ecmaVersion: 'latest',
         ecmaFeatures: { jsx: true },
         sourceType: 'module',
+        project: './tsconfig.json'
       },
     },
     plugins: {
-      '@typescript-eslint': require('@typescript-eslint/eslint-plugin')
+      '@typescript-eslint': tsPlugin
     },
     extends: [
       js.configs.recommended,
+      tsPlugin.configs.recommended,
       reactHooks.configs['recommended-latest'],
-      reactRefresh.configs.vite,
-      'plugin:@typescript-eslint/recommended'
+      reactRefresh.configs.vite
     ],
     rules: {
       'no-unused-vars': ['error', { varsIgnorePattern: '^[A-Z_]' }],
