@@ -12,8 +12,8 @@ export type UploadedDocument = {
 type Props = {
   isOpen?: boolean;
   onClose?: () => void;
-  onUploadComplete?: (docs: UploadedDocument[]) => void;
-  onUpload?: (docs: UploadedDocument[]) => void;
+  onUploadComplete?: (_docs: UploadedDocument[]) => void;
+  onUpload?: (_docs: UploadedDocument[]) => void;
 };
 
 export default function DocumentUploadModal(props: Props) {

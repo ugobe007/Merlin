@@ -1,7 +1,7 @@
 import react from '@vitejs/plugin-react'
 import * as path from 'path'
 
-export default ({ mode }) => {
+export default ({ _mode }) => {
   return {
     plugins: [react()],
     resolve: { alias: { '@': path.resolve(__dirname, 'src') } },

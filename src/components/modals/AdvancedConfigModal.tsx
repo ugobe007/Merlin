@@ -25,13 +25,13 @@ const AdvancedConfigModal: React.FC<AdvancedConfigModalProps> = ({
   const safeDocuments = Array.isArray(uploadedDocuments) ? uploadedDocuments : ([] as UploadedDocument[]);
 
   // aiSuggestions may be missing on some docs; default to empty arrays
-  const allSuggestions = safeDocuments.flatMap(doc => (doc?.aiSuggestions ?? []));
+  const _allSuggestions = safeDocuments.flatMap(doc => (doc?.aiSuggestions ?? []));
 
   // extractedData may be missing/null; use an empty object so property access is safe
   const extractedData = safeDocuments[0]?.extractedData ?? {};
 
   // Build initial config values using nullish coalescing to fall back to existing config
-  const initialConfigFromExtracted = {
+  const _initialConfigFromExtracted = {
     projectReference: (extractedData as any)?.projectName ?? (config?.projectReference ?? ''),
     customerName: (extractedData as any)?.customerName ?? (config?.customerName ?? ''),
     siteLocation: (extractedData as any)?.location ?? (config?.siteLocation ?? ''),

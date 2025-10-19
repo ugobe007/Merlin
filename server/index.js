@@ -28,7 +28,7 @@ const EXCEL_TEMPLATE_PATH = path.join(__dirname, 'templates', 'BESS_Quote_Templa
 // Pre-load templates into memory for faster access
 let wordTemplateBuffer = null;
 let excelTemplateWB = null;
-let templateCache = new Map();
+let _templateCache = new Map();
 
 function loadWordTemplate() {
   if (!wordTemplateBuffer) {
@@ -55,7 +55,7 @@ app.get('/api/health', (_req, res) => res.json({ ok: true }));
 app.post('/api/export/word', async (req, res) => {
   try {
     const startTime = Date.now();
-    const { inputs, assumptions, outputs } = req.body || {};
+    const { inputs, _assumptions, outputs } = req.body || {};
     
     // Ensure template is loaded
     const templateBuffer = loadWordTemplate();
@@ -79,11 +79,11 @@ app.post('/api/export/word', async (req, res) => {
       budgetAmount: inputs?.budgetAmount ?? '',
       pcsSeparate: inputs?.pcsSeparate ? 'Yes' : 'No',
 
-      batteryCostPerKWh: assumptions?.batteryCostPerKWh ?? '',
-      pcsCostPerKW: assumptions?.pcsCostPerKW ?? '',
-      bosPct: assumptions?.bosPct ?? '',
-      epcPct: assumptions?.epcPct ?? '',
-      tariffPct: assumptions?.tariffByRegion?.[inputs?.locationRegion] ?? '',
+      batteryCostPerKWh: _assumptions?.batteryCostPerKWh ?? '',
+      pcsCostPerKW: _assumptions?.pcsCostPerKW ?? '',
+      bosPct: _assumptions?.bosPct ?? '',
+      epcPct: _assumptions?.epcPct ?? '',
+      tariffPct: _assumptions?.tariffByRegion?.[inputs?.locationRegion] ?? '',
 
       totalMWh: outputs?.totalMWh?.toFixed ? outputs.totalMWh.toFixed(2) : outputs?.totalMWh ?? '',
       pcsKW: Math.round(outputs?.pcsKW || 0).toLocaleString(),
@@ -100,7 +100,7 @@ app.post('/api/export/word', async (req, res) => {
       grandCapex: Math.round(outputs?.grandCapex || 0).toLocaleString(),
       annualSavings: Math.round(outputs?.annualSavings || 0).toLocaleString(),
       roiYears: outputs?.roiYears ? outputs.roiYears.toFixed(2) : '—',
-      vendorName: assumptions?.vendorName || '',
+      vendorName: _assumptions?.vendorName || '',
     };
 
     doc.setData(formattedData);
@@ -131,7 +131,7 @@ app.post('/api/export/word', async (req, res) => {
 app.post('/api/export/excel', async (req, res) => {
   try {
     const startTime = Date.now();
-    const { inputs, assumptions, outputs } = req.body || {};
+    const { inputs, _assumptions, outputs } = req.body || {};
     
     // Ensure template is loaded
     const templateWB = await loadExcelTemplate();

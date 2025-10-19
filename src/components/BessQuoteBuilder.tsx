@@ -31,8 +31,8 @@ export default function BessQuoteBuilder() {
   const [utilization, setUtilization] = useState('0.3');
   const [warranty, setWarranty] = useState('10 years');
   const [location, setLocation] = useState('UK (6%)');
-  const [pcsSeparate, setPcsSeparate] = useState(false);
-  const [budgetKnown, setBudgetKnown] = useState(true);
+  const [_pcsSeparate, setPcsSeparate] = useState(false);
+  const [_budgetKnown, setBudgetKnown] = useState(true);
   const [budget, setBudget] = useState('6000000');
  
   // Assumptions State
@@ -83,8 +83,8 @@ export default function BessQuoteBuilder() {
     setUtilization(data.utilization || '0.3');
     setWarranty(data.warranty || '10 years');
     setLocation(data.location || 'UK (6%)');
-    setPcsSeparate(data.pcsSeparate || false);
-    setBudgetKnown(data.budgetKnown || true);
+    setPcsSeparate(data._pcsSeparate || false);
+    setBudgetKnown(data._budgetKnown || true);
     setBudget(data.budget || '6000000');
     setBatteryKwh(data.batteryKwh || 248);
     setPcsKw(data.pcsKw || 150);

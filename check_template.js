@@ -1,5 +1,5 @@
 const mammoth = require('mammoth');
-const fs = require('fs');
+const _fs = require('_fs');
 
 async function extractTemplateText() {
   try {
