@@ -26,12 +26,12 @@ export default function Portfolio({ onClose, onLoadQuote }: PortfolioProps) {
   const [selectedQuote, setSelectedQuote] = useState<PortfolioQuote | null>(null);
 
   useEffect(() => {
-    fetchQuotes();
+    void fetchQuotes();
     
     // Listen for portfolio refresh events
     const handlePortfolioRefresh = () => {
       console.log('Portfolio refresh event received');
-      fetchQuotes();
+      void fetchQuotes();
     };
     
     window.addEventListener('portfolio-refresh', handlePortfolioRefresh);
@@ -201,7 +201,7 @@ export default function Portfolio({ onClose, onLoadQuote }: PortfolioProps) {
               />
             </div>
             <button
-              onClick={fetchQuotes}
+              onClick={() => void fetchQuotes()}
               className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 flex items-center gap-2"
             >
               🔄 Refresh
@@ -250,7 +250,7 @@ export default function Portfolio({ onClose, onLoadQuote }: PortfolioProps) {
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          toggleFavorite(quote.id);
+                          void toggleFavorite(quote.id);
                         }}
                         className={`text-xl ${quote.is_favorite ? 'text-yellow-500' : 'text-gray-300'} hover:text-yellow-500`}
                       >
@@ -302,7 +302,7 @@ export default function Portfolio({ onClose, onLoadQuote }: PortfolioProps) {
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          deleteQuote(quote.id);
+                          void deleteQuote(quote.id);
                         }}
                         className="text-red-600 hover:text-red-800 text-sm px-3 py-1"
                       >

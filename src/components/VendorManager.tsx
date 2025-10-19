@@ -56,7 +56,7 @@ const VendorManager: React.FC<VendorManagerProps> = ({ isOpen, onClose }) => {
 
   useEffect(() => {
     if (isOpen) {
-      fetchVendors();
+      void fetchVendors();
     }
   }, [isOpen]);
 
@@ -103,7 +103,7 @@ const VendorManager: React.FC<VendorManagerProps> = ({ isOpen, onClose }) => {
           address: '', website: '', specialty: '', notes: ''
         });
         setShowAddVendor(false);
-        fetchVendors();
+        await void fetchVendors();
       }
     } catch (error) {
       console.error('Error creating vendor:', error);
@@ -113,7 +113,7 @@ const VendorManager: React.FC<VendorManagerProps> = ({ isOpen, onClose }) => {
   const handleVendorSelect = (vendor: Vendor) => {
     setSelectedVendor(vendor);
     setActiveTab('products');
-    fetchVendorProducts(vendor.id);
+    void fetchVendorProducts(vendor.id);
   };
 
   if (!isOpen) return null;
@@ -355,7 +355,7 @@ const VendorManager: React.FC<VendorManagerProps> = ({ isOpen, onClose }) => {
                   Cancel
                 </button>
                 <button
-                  onClick={createVendor}
+                  onClick={() => void createVendor()}
                   disabled={!newVendor.name || !newVendor.contact_email}
                   className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-300"
                 >

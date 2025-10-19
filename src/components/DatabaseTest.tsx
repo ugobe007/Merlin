@@ -61,9 +61,8 @@ const DatabaseTest: React.FC<DatabaseTestProps> = ({ isOpen, onClose }) => {
       if (!response.ok) {
         throw new Error(`Create vendor failed: ${response.status}`);
       }
-
-      // Refresh data
-      testAPI();
+      // Refresh data — await so errors propagate into this try/catch
+      await testAPI();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create vendor');
     }
@@ -71,7 +70,8 @@ const DatabaseTest: React.FC<DatabaseTestProps> = ({ isOpen, onClose }) => {
 
   useEffect(() => {
     if (isOpen) {
-      testAPI();
+      // intentionally fire-and-forget from effect; use void to acknowledge the Promise
+      void testAPI();
     }
   }, [isOpen]);
 
@@ -95,14 +95,14 @@ const DatabaseTest: React.FC<DatabaseTestProps> = ({ isOpen, onClose }) => {
             {/* Controls */}
             <div className="flex gap-3">
               <button
-                onClick={testAPI}
+                onClick={() => void testAPI()}
                 disabled={loading}
                 className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-300"
               >
                 {loading ? 'Testing...' : 'Test Database API'}
               </button>
               <button
-                onClick={addTestVendor}
+                onClick={() => void addTestVendor()}
                 disabled={loading}
                 className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:bg-gray-300"
               >
