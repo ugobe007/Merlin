@@ -1,0 +1,138 @@
+*** Begin Patch
+*** Update File: src/components/DatabaseTest.tsx
+@@
+-      // Refresh data
+-      testAPI();
++      // Refresh data — await so errors propagate into this try/catch
++      await testAPI();
+@@
+-  useEffect(() => {
+-    if (isOpen) {
+-      testAPI();
+-    }
+-  }, [isOpen]);
++  useEffect(() => {
++    if (isOpen) {
++      // intentionally fire-and-forget from effect; use void to acknowledge the Promise
++      void testAPI();
++    }
++  }, [isOpen]);
+@@
+-              <button
+-                onClick={testAPI}
++              <button
++                onClick={() => void testAPI()}
+                 disabled={loading}
+                 className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-300"
+               >
+*** End Patch
+*** Begin Patch
+*** Update File: src/components/Portfolio.tsx
+@@
+-  useEffect(() => {
+-    fetchQuotes();
+-    
+-    // Listen for portfolio refresh events
+-    const handlePortfolioRefresh = () => {
+-      console.log('Portfolio refresh event received');
+-      fetchQuotes();
+-    };
+-    
+-    window.addEventListener('portfolio-refresh', handlePortfolioRefresh);
+-    
+-    return () => {
+-      window.removeEventListener('portfolio-refresh', handlePortfolioRefresh);
+-    };
+-  }, []);
++  useEffect(() => {
++    // intentionally fire-and-forget initial fetch
++    void fetchQuotes();
++    
++    // Listen for portfolio refresh events
++    const handlePortfolioRefresh = () => {
++      console.log('Portfolio refresh event received');
++      void fetchQuotes();
++    };
++    
++    window.addEventListener('portfolio-refresh', handlePortfolioRefresh);
++    
++    return () => {
++      window.removeEventListener('portfolio-refresh', handlePortfolioRefresh);
++    };
++  }, []);
+@@
+-            <button
+-              onClick={fetchQuotes}
++            <button
++              onClick={() => void fetchQuotes()}
+               className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 flex items-center gap-2"
+             >
+               🔄 Refresh
+             </button>
+@@
+-                      <button
+-                        onClick={(e) => {
+-                          e.stopPropagation();
+-                          toggleFavorite(quote.id);
+-                        }}
++                      <button
++                        onClick={(e) => {
++                          e.stopPropagation();
++                          // explicitly ignore the Promise returned by toggleFavorite
++                          void toggleFavorite(quote.id);
++                        }}
+                         className={`text-xl ${quote.is_favorite ? 'text-yellow-500' : 'text-gray-300'} hover:text-yellow-500`}
+                       >
+                         ⭐
+                       </button>
+@@
+-                      <button
+-                        onClick={(e) => {
+-                          e.stopPropagation();
+-                          deleteQuote(quote.id);
+-                        }}
++                      <button
++                        onClick={(e) => {
++                          e.stopPropagation();
++                          // explicitly ignore the Promise returned by deleteQuote
++                          void deleteQuote(quote.id);
++                        }}
+                         className="text-red-600 hover:text-red-800 text-sm px-3 py-1"
+                       >
+                         🗑️ Delete
+                       </button>
+*** End Patch
+*** Begin Patch
+*** Update File: src/components/VendorManager.tsx
+@@
+   useEffect(() => {
+     if (isOpen) {
+-      fetchVendors();
++      // intentionally fire-and-forget here
++      void fetchVendors();
+     }
+   }, [isOpen]);
+@@
+   const createVendor = async () => {
+     if (!newVendor.name || !newVendor.contact_email) return;
+     
+     try {
+@@
+-        // await to ensure the newly created vendor appears and errors are handled here
+-        await fetchVendors();
++        // await to ensure the newly created vendor appears and errors are handled here
++        await fetchVendors();
+       }
+     } catch (error) {
+       console.error('Error creating vendor:', error);
+     }
+   };
+@@
+   const handleVendorSelect = (vendor: Vendor) => {
+     setSelectedVendor(vendor);
+     setActiveTab('products');
+-    fetchVendorProducts(vendor.id);
++    // intentionally fire-and-forget; use void
++    void fetchVendorProducts(vendor.id);
+   };
+*** End Patch
