@@ -25,10 +25,16 @@ module.exports = defineConfig([
     },
 
     // Minimal rules: prefer the TS plugin's no-unused-vars rule over the base one.
+    // Allow variables starting with uppercase or underscore (varsIgnorePattern),
+    // and allow function args that start with underscore (argsIgnorePattern).
     rules: {
       'no-unused-vars': 'off',
-      '@typescript-eslint/no-unused-vars': ['error', { varsIgnorePattern: '^[A-Z_]' }],
-      // keep no-undef off: TS handles undefined checks
+      '@typescript-eslint/no-unused-vars': ['error', {
+        varsIgnorePattern: '^[A-Z_]',
+        argsIgnorePattern: '^_',
+        caughtErrorsIgnorePattern: '^_'
+      }],
+      // keep no-undef off: TypeScript handles undefined checks
       'no-undef': 'off',
     },
 
