@@ -3,23 +3,28 @@ const { defineConfig } = require('eslint/config');
 module.exports = defineConfig({
   ignores: ['dist/**'],
   files: ['**/*.{js,jsx,ts,tsx}'],
+
+  // Provide the actual parser implementation object (not a string).
   languageOptions: {
-    parser: '@typescript-eslint/parser',
+    parser: require('@typescript-eslint/parser'),
     parserOptions: {
       ecmaVersion: 'latest',
       sourceType: 'module',
       ecmaFeatures: { jsx: true },
-      project: './tsconfig.json'
-    }
+      project: './tsconfig.json',
+    },
   },
-  // Minimal rules only to unblock linting — no 'extends' or plugin configs to avoid nested/lookup issues.
+
+  // Minimal rules to unblock linting. Avoid plugin 'extends' objects that can nest extends.
   rules: {
     'no-unused-vars': ['error', { varsIgnorePattern: '^[A-Z_]' }],
-    'no-undef': 'off'
+    // turn off browser-specific undefined checks (TypeScript handles these)
+    'no-undef': 'off',
   },
+
   settings: {
     react: {
-      version: 'detect'
-    }
-  }
+      version: 'detect',
+    },
+  },
 });
